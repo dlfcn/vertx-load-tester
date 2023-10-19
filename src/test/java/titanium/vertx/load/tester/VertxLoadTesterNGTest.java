@@ -16,8 +16,6 @@ import io.vertx.core.VertxOptions;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import static org.testng.Assert.assertTrue;
@@ -81,11 +79,11 @@ public class VertxLoadTesterNGTest {
             throws InterruptedException, Exception {
         
         tearDownClass();
-        Thread.sleep(500); // wait sec for threads and verticles to stop
+        Thread.sleep(500); // wait a sec for threads and verticles to stop
         
         SERVER_VERTX = Vertx.vertx();
         deployLocalVerticles(SERVER_VERTX, port, multiplexingLimit);
-        Thread.sleep(500); // wait sec for verticles to start
+        Thread.sleep(500); // wait a sec for verticles to start
         
         CLIENT_VERTX = Vertx.vertx();
         TESTER = new VertxLoadTester(CLIENT_VERTX, 
@@ -94,7 +92,7 @@ public class VertxLoadTesterNGTest {
                 multiplexingLimit,
                 method, host, port, path);
         
-        Thread.sleep(5_000); // wait a couple seconds for tps buckets to fill
+        Thread.sleep(5_000); // wait a sec for tps buckets to fill
 
         boolean desiredTpsReached = false;
         int counter = 0;
@@ -104,6 +102,7 @@ public class VertxLoadTesterNGTest {
                 desiredTpsReached = true;
                 break;
             } else if (counter++ == 20) {
+                // test taking too long, desired tps cannot be reached
                 break;
             } else {
                 // will take time for tps buckets to fill
@@ -117,7 +116,7 @@ public class VertxLoadTesterNGTest {
     private static void deployLocalVerticles(final Vertx vertx, final int port, final int multiplexingLimit) {
         
         int numberOfVerticles = VertxOptions.DEFAULT_EVENT_LOOP_POOL_SIZE;
-        System.out.printf("Deploying [%s] verticles", numberOfVerticles);
+        System.out.printf("Deploying [%s] verticles.\n", numberOfVerticles);
         
         deployLocalVerticle(vertx, 
                 port,
@@ -149,7 +148,7 @@ public class VertxLoadTesterNGTest {
     public static class LocalVerticle extends AbstractVerticle {
 
         private static final AtomicInteger INDEX = new AtomicInteger(0);
-        private static final List<AtomicLong> BUCKETS = new ArrayList<>();
+        private static final AtomicLong[] BUCKETS = new AtomicLong[61];
         private static long AVERAGE_TPS = 0; // for the last 60 seconds
         private final int port;
         private final int multiplexingLimit;
@@ -157,7 +156,7 @@ public class VertxLoadTesterNGTest {
         
         static {
             for (int i = 0; i < 61; i++) {
-                BUCKETS.add(new AtomicLong(0));
+                BUCKETS[i] = new AtomicLong(0);
             }
         }
         
@@ -172,19 +171,19 @@ public class VertxLoadTesterNGTest {
                 
                 int index = 0;
                 
-                if (INDEX.get() == (BUCKETS.size() - 1)) {
+                if (INDEX.get() == (BUCKETS.length - 1)) {
                     INDEX.set(0);
-                    BUCKETS.get(0).set(0);
+                    BUCKETS[0].set(0);
                 } else {
                     index = INDEX.incrementAndGet();
-                    BUCKETS.get(index).set(0);
+                    BUCKETS[index].set(0);
                 }
                 
                 long total = 0;
                 
-                for (int i = 0; i < BUCKETS.size(); i++) {
+                for (int i = 0; i < BUCKETS.length; i++) {
                     if (i != index) {
-                        total = total + BUCKETS.get(i).get();
+                        total = total + BUCKETS[i].get();
                     }
                 }
                 
@@ -211,7 +210,7 @@ public class VertxLoadTesterNGTest {
                     .requestHandler(requestHandler -> {
                         requestHandler.endHandler(endHandler -> {
                             requestHandler.response().end();
-                            BUCKETS.get(INDEX.get()).incrementAndGet();
+                            BUCKETS[INDEX.get()].incrementAndGet();
                         });
                     })
                     .listen(h -> {
