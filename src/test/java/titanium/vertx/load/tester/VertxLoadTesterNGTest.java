@@ -39,7 +39,7 @@ public class VertxLoadTesterNGTest {
         // do nothing
     }
 
-    @AfterClass
+    @AfterClass(alwaysRun = true)
     public static void tearDownClass() throws Exception {
         
         if (TESTER != null) {
