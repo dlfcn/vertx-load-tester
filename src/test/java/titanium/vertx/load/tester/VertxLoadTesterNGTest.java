@@ -27,7 +27,7 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 /**
- * This class starts HTTP servers verticles that the load tester client will
+ * This class starts HTTP server verticles that the load tester client will
  * send requests to.
  */
 public class VertxLoadTesterNGTest {
@@ -43,7 +43,18 @@ public class VertxLoadTesterNGTest {
 
     @AfterClass
     public static void tearDownClass() throws Exception {
-        SERVER_VERTX.close();
+        
+        if (TESTER != null) {
+            TESTER.destroy();
+        }
+        
+        if (CLIENT_VERTX != null) {
+            CLIENT_VERTX.close();
+        }
+        
+        if (SERVER_VERTX != null) {
+            SERVER_VERTX.close();
+        }
     }
     
     @DataProvider
@@ -67,24 +78,14 @@ public class VertxLoadTesterNGTest {
     @Test(dataProvider = "loadProvider")
     public void test(int numberOfConnections, int tpsPerConnection, int multiplexingLimit, 
             HttpMethod method, String host, int port, String path) 
-            throws InterruptedException {
+            throws InterruptedException, Exception {
         
-        if (TESTER != null) {
-            TESTER.destroy();
-        }
-        
-        if (CLIENT_VERTX != null) {
-            CLIENT_VERTX.close();
-        }
-        
-        if (SERVER_VERTX != null) {
-            SERVER_VERTX.close();
-        }
-        
+        tearDownClass();
         Thread.sleep(500); // wait sec for threads and verticles to stop
         
         SERVER_VERTX = Vertx.vertx();
         deployLocalVerticles(SERVER_VERTX, port, multiplexingLimit);
+        Thread.sleep(500); // wait sec for verticles to start
         
         CLIENT_VERTX = Vertx.vertx();
         TESTER = new VertxLoadTester(CLIENT_VERTX, 
@@ -110,16 +111,19 @@ public class VertxLoadTesterNGTest {
             }
         }
         
-        assertTrue(desiredTpsReached, String.format("Desired TPS of [%s] was not reached within 60 seconds", (numberOfConnections * tpsPerConnection)));
+        assertTrue(desiredTpsReached, String.format("Desired TPS of [%s] was not reached within 120 seconds", (numberOfConnections * tpsPerConnection)));
     }
 
     private static void deployLocalVerticles(final Vertx vertx, final int port, final int multiplexingLimit) {
+        
+        int numberOfVerticles = VertxOptions.DEFAULT_EVENT_LOOP_POOL_SIZE;
+        System.out.printf("Deploying [%s] verticles", numberOfVerticles);
         
         deployLocalVerticle(vertx, 
                 port,
                 multiplexingLimit,
                 new AtomicInteger(0), 
-                VertxOptions.DEFAULT_EVENT_LOOP_POOL_SIZE);
+                numberOfVerticles);
         
         LocalVerticle.start(vertx);
     }

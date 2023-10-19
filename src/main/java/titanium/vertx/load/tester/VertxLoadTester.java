@@ -50,7 +50,12 @@ public class VertxLoadTester {
         String path = args[6];
 
         Vertx vertx = Vertx.vertx();
-        VertxLoadTester loadTester = new VertxLoadTester(vertx, numberOfConnections, tpsPerConnection, multiplexingLimit, method, host, port, path);
+        
+        VertxLoadTester loadTester = new VertxLoadTester(vertx, 
+                numberOfConnections, 
+                tpsPerConnection, 
+                multiplexingLimit, 
+                method, host, port, path);
         
         // todo - clean up resources
         // vertx.close();
