@@ -11,11 +11,15 @@
 package titanium.vertx.load.tester;
 
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
+import io.vertx.core.WorkerExecutor;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
+import io.vertx.core.http.HttpServerResponse;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import static org.testng.Assert.assertTrue;
@@ -198,6 +202,9 @@ public class VertxLoadTesterNGTest {
         @Override
         public void start() throws Exception {
             
+            WorkerExecutor worker = this.vertx.createSharedWorkerExecutor(
+                    "worker", 20, 100, TimeUnit.MILLISECONDS);
+            
             HttpServerOptions options = new HttpServerOptions();
             options.getInitialSettings().setMaxConcurrentStreams(multiplexingLimit);
             options.setHost("localhost");
@@ -212,8 +219,21 @@ public class VertxLoadTesterNGTest {
                     })
                     .requestHandler(requestHandler -> {
                         requestHandler.endHandler(endHandler -> {
-                            requestHandler.response().end();
-                            BUCKETS[INDEX.get()].incrementAndGet();
+                            
+                            Future<HttpServerResponse> future = worker.executeBlocking(handler -> {
+                                
+//                                long endWorkTime = System.currentTimeMillis() + 5;
+//                                while (System.currentTimeMillis() < endWorkTime) {
+//                                    // simulate time to execute service logic
+//                                }
+                                
+                                handler.complete(requestHandler.response());
+                            }, false);
+                            
+                            future.onComplete(handler -> {
+                                handler.result().end();
+                                BUCKETS[INDEX.get()].incrementAndGet();
+                            });
                         });
                     })
                     .listen(h -> {
