@@ -44,14 +44,17 @@ public class VertxLoadTesterNGTest {
         
         if (TESTER != null) {
             TESTER.destroy();
+            TESTER = null;
         }
         
         if (CLIENT_VERTX != null) {
             CLIENT_VERTX.close();
+            CLIENT_VERTX = null;
         }
         
         if (SERVER_VERTX != null) {
             SERVER_VERTX.close();
+            SERVER_VERTX = null;
         }
     }
     
