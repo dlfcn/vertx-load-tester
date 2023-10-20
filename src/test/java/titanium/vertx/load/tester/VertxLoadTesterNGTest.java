@@ -173,6 +173,7 @@ public class VertxLoadTesterNGTest {
 
         private static final AtomicInteger INDEX = new AtomicInteger(0);
         private static final AtomicLong[] BUCKETS = new AtomicLong[61];
+        private static long TPS_TIMER_ID = -1;
         private static long AVERAGE_TPS = 0; // for the last 60 seconds
         private final int port;
         private final int multiplexingLimit;
@@ -195,7 +196,7 @@ public class VertxLoadTesterNGTest {
 
         public static void start(Vertx vertx) {
 
-            vertx.setPeriodic(1_000, handler -> {
+            TPS_TIMER_ID = vertx.setPeriodic(1_000, handler -> {
 
                 int index = 0;
 
@@ -269,9 +270,19 @@ public class VertxLoadTesterNGTest {
 
         @Override
         public void stop() throws Exception {
+            
             if (this.httpServer != null) {
                 this.httpServer.close();
                 this.httpServer = null;
+            }
+            
+            if (TPS_TIMER_ID != -1) {
+                this.vertx.cancelTimer(TPS_TIMER_ID);
+                TPS_TIMER_ID = -1;
+                AVERAGE_TPS = 0;
+                for (AtomicLong bucket : BUCKETS) {
+                    bucket.set(0);
+                }
             }
         }
         

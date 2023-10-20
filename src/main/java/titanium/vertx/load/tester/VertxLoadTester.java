@@ -20,7 +20,6 @@ import io.vertx.ext.web.client.WebClientOptions;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class VertxLoadTester {
     
@@ -88,7 +87,7 @@ public class VertxLoadTester {
 
     private static class Connection extends Thread {
 
-        private final AtomicBoolean isRunning = new AtomicBoolean(true);
+        private boolean running = true;
         private final int tpsPerConnection;
         private final WebClient client;
         private final HttpRequest<Buffer> request;
@@ -105,7 +104,7 @@ public class VertxLoadTester {
 
         @Override
         public void run() {
-            while (isRunning.get()) {
+            while (running) {
                 try {
                     long startTime = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(1);
                     int counter = 0;
@@ -132,7 +131,7 @@ public class VertxLoadTester {
 
         @Override
         public void interrupt() {
-            isRunning.set(false);
+            running = false;
         }
     }
 
