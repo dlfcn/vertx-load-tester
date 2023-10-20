@@ -66,31 +66,38 @@ public class VertxLoadTesterNGTest {
     public Object[][] loadProvider() {
         /*
         Note that each test will take roughly 60 seconds to execute.
-        And that adjusting the multiplexing limit per connection has an affect
-        on achievable TPS. If too low TPS will take a while to average out, too high
-        and the CPU spend too much time consuming from its TCP stream.
          */
         return new Object[][]{
             {
-                2, 1_000, 1_000, 100_000, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
+                false, 2, 1_000, 1_000, 100_000, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
             },
             {
-                10, 6_000, 2_000, 100_000, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
+                false, 10, 6_000, 2_000, 100_000, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
+            },
+            {
+                true, 2, 1_000, 1_000, 100_000, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
+            },
+            {
+                true, 10, 6_000, 2_000, 100_000, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
             }
         };
     }
 
     @Test(dataProvider = "loadProvider")
-    public void test(int numberOfConnections, int tpsPerConnection, int multiplexingLimit, long blockingNanos,
+    public void test(boolean executeBlocking, 
+            int numberOfConnections, 
+            int tpsPerConnection, 
+            int multiplexingLimit, 
+            long blockingNanos,
             HttpMethod method, String host, int port, String path)
             throws InterruptedException, Exception {
 
         tearDownClass();
-        Thread.sleep(500); // wait a sec for threads and verticles to stop
+        Thread.sleep(1_000); // wait a sec for threads and verticles to stop
 
         SERVER_VERTX = Vertx.vertx();
-        deployLocalVerticles(SERVER_VERTX, port, multiplexingLimit, blockingNanos);
-        Thread.sleep(500); // wait a sec for verticles to start
+        deployLocalVerticles(SERVER_VERTX, port, multiplexingLimit, blockingNanos, executeBlocking);
+        Thread.sleep(1_000); // wait a sec for verticles to start
 
         CLIENT_VERTX = Vertx.vertx();
         TESTER = new VertxLoadTester(CLIENT_VERTX,
@@ -109,7 +116,7 @@ public class VertxLoadTesterNGTest {
                 desiredTpsReached = true;
                 break;
             } else if (counter++ == 20) {
-                // test taking too long, desired tps cannot be reached
+                // desired tps cannot be reached
                 break;
             } else {
                 // will take time for tps buckets to fill
@@ -123,7 +130,8 @@ public class VertxLoadTesterNGTest {
     private static void deployLocalVerticles(final Vertx vertx,
             final int port,
             final int multiplexingLimit,
-            final long blockingNanos) {
+            final long blockingNanos,
+            final boolean executeBlocking) {
 
         int numberOfVerticles = VertxOptions.DEFAULT_EVENT_LOOP_POOL_SIZE;
         System.out.printf("Deploying [%s] verticles.\n", numberOfVerticles);
@@ -132,6 +140,7 @@ public class VertxLoadTesterNGTest {
                 port,
                 multiplexingLimit,
                 blockingNanos,
+                executeBlocking,
                 new AtomicInteger(0),
                 numberOfVerticles);
 
@@ -142,16 +151,18 @@ public class VertxLoadTesterNGTest {
             final int port,
             final int multiplexingLimit,
             final long blockingNanos,
+            final boolean executeBlocking,
             final AtomicInteger counter,
             final int verticles) {
 
-        vertx.deployVerticle(new LocalVerticle(port, multiplexingLimit, blockingNanos), handler -> {
+        vertx.deployVerticle(new LocalVerticle(port, multiplexingLimit, blockingNanos, executeBlocking), handler -> {
             if (counter.incrementAndGet() < verticles) {
 
                 deployLocalVerticle(vertx,
                         port,
                         multiplexingLimit,
                         blockingNanos,
+                        executeBlocking,
                         counter,
                         verticles);
             }
@@ -166,6 +177,7 @@ public class VertxLoadTesterNGTest {
         private final int port;
         private final int multiplexingLimit;
         private final long blockingNanos;
+        private final boolean executeBlocking;
         private HttpServer httpServer;
 
         static {
@@ -174,10 +186,11 @@ public class VertxLoadTesterNGTest {
             }
         }
 
-        public LocalVerticle(int port, int multiplexingLimit, long blockingNanos) {
+        public LocalVerticle(int port, int multiplexingLimit, long blockingNanos, boolean executeBlocking) {
             this.port = port;
             this.multiplexingLimit = multiplexingLimit;
             this.blockingNanos = blockingNanos;
+            this.executeBlocking = executeBlocking;
         }
 
         public static void start(Vertx vertx) {
@@ -226,21 +239,23 @@ public class VertxLoadTesterNGTest {
                         System.out.println("Connection created.");
                     })
                     .requestHandler(requestHandler -> {
+                        if (this.executeBlocking) {
+                            // offload service logic processing to worker thread
+                            Future<HttpServerResponse> future = worker.executeBlocking(handler -> {
+                                this.executeServiceLogic();
+                                handler.complete(requestHandler.response());
+                            }, false);
 
-                        Future<HttpServerResponse> future = worker.executeBlocking(handler -> {
-
-                            long endWorkTime = System.nanoTime() + this.blockingNanos;
-                            while (System.nanoTime() < endWorkTime) {
-                                // simulate time to execute service logic
-                            }
-
-                            handler.complete(requestHandler.response());
-                        }, false);
-
-                        future.onComplete(handler -> {
-                            handler.result().end();
+                            future.onComplete(handler -> {
+                                handler.result().end();
+                                BUCKETS[INDEX.get()].incrementAndGet();
+                            });
+                        } else {
+                            // execute service logic on event loop thread
+                            this.executeServiceLogic();
+                            requestHandler.response().end();
                             BUCKETS[INDEX.get()].incrementAndGet();
-                        });
+                        }
                     })
                     .listen(h -> {
                         if (h.succeeded()) {
@@ -257,6 +272,13 @@ public class VertxLoadTesterNGTest {
             if (this.httpServer != null) {
                 this.httpServer.close();
                 this.httpServer = null;
+            }
+        }
+        
+        private void executeServiceLogic() {
+            long endWorkTime = System.nanoTime() + this.blockingNanos;
+            while (System.nanoTime() < endWorkTime) {
+                // simulate time to execute service logic
             }
         }
     }

@@ -126,12 +126,13 @@ public class VertxLoadTester {
                     // do nothing
                 }
             }
+            
+            client.close();
         }
 
         @Override
         public void interrupt() {
             isRunning.set(false);
-            client.close();
         }
     }
 
