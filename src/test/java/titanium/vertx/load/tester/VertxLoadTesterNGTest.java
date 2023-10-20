@@ -96,7 +96,11 @@ public class VertxLoadTesterNGTest {
         Thread.sleep(1_000); // wait a sec for threads and verticles to stop
 
         SERVER_VERTX = Vertx.vertx();
-        deployLocalVerticles(SERVER_VERTX, port, multiplexingLimit, blockingNanos, executeBlocking);
+        deployLocalVerticles(SERVER_VERTX, 
+                port, 
+                multiplexingLimit, 
+                blockingNanos, 
+                executeBlocking);
         Thread.sleep(1_000); // wait a sec for verticles to start
 
         CLIENT_VERTX = Vertx.vertx();
@@ -105,7 +109,6 @@ public class VertxLoadTesterNGTest {
                 tpsPerConnection,
                 multiplexingLimit,
                 method, host, port, path);
-
         Thread.sleep(5_000); // wait a sec for tps buckets to fill
 
         boolean desiredTpsReached = false;
