@@ -66,6 +66,7 @@ public class VertxLoadTesterNGTest {
     public Object[][] loadProvider() {
         /*
         Note that each test will take roughly 60 seconds to execute.
+        And tests might fail if you don't have enough CPU!
          */
         return new Object[][]{
             {
