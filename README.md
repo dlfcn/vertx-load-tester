@@ -1,6 +1,8 @@
 # vertx-load-tester
 Vertx Load Tester
 
+Please tell me to send HTTP/2 requests!
+
 To run load tester...
 
 1. Build project
@@ -9,10 +11,17 @@ To run load tester...
 
 Note that seven parameters in the following order are required to run the load tester...
 
-1. Desired number of connection(s) 
+1. Desired number of TCP connection(s)
+-- How meany threads do you want me to start?
 2. Desired TPS per connection
-3. Multiplexing limit for each connection 
+-- How many requests do you want each thread to send per second over its TCP connection?
+3. Multiplexing limit for each TCP connection 
+-- How many streams/requests/transactions should one TCP connection support? Dont go crazy!
 4. HTTP method of the request 
 5. Host of HTTP server being load tested 
 6. Port of HTTP server being load tested 
 7. Path of the HTTP service being load tested
+
+// TODO
+Currently each thread gets its own TCP connection.
+Implement a way to have multiple threads send requts using the same vertx web client.

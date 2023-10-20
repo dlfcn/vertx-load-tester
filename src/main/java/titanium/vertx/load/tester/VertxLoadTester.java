@@ -20,9 +20,11 @@ import io.vertx.ext.web.client.WebClientOptions;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class VertxLoadTester {
-    
+
     /**
      * Seven parameters in the following order are required to run this.
      *
@@ -49,22 +51,29 @@ public class VertxLoadTester {
         String path = args[6];
 
         Vertx vertx = Vertx.vertx();
-        
-        VertxLoadTester loadTester = new VertxLoadTester(vertx, 
-                numberOfConnections, 
-                tpsPerConnection, 
-                multiplexingLimit, 
+
+        VertxLoadTester loadTester = new VertxLoadTester(vertx,
+                numberOfConnections,
+                tpsPerConnection,
+                multiplexingLimit,
                 method, host, port, path);
-        
+
         // todo - clean up resources
-        // vertx.close();
         // loadTester.destroy();
     }
-    
+
+    private final Vertx vertx;
+    private final AtomicInteger bucketIndex = new AtomicInteger(0);
+    private final AtomicLong[] buckets = new AtomicLong[61];
+    private final long tpsTimerId;
+    private long averageTps = 0; // for the last 60 seconds
     private final List<Connection> connections = new ArrayList<>();
-    
+
     public VertxLoadTester(Vertx vertx, int numberOfConnections, int tpsPerConnection, int multiplexingLimit,
             HttpMethod method, String host, int port, String path) {
+        
+        this.vertx = vertx;
+        this.tpsTimerId = this.startTpsTimer();
 
         WebClientOptions options = new WebClientOptions();
         options.setProtocolVersion(HttpVersion.HTTP_2);
@@ -73,17 +82,63 @@ public class VertxLoadTester {
         options.setHttp2MultiplexingLimit(multiplexingLimit);
 
         for (int i = 0; i < numberOfConnections; i++) {
-            Connection connection = new Connection(vertx, options, tpsPerConnection, method, host, port, path);
+            
+            Connection connection = new Connection(vertx, 
+                    options, 
+                    tpsPerConnection, 
+                    bucketIndex, buckets,
+                    method, host, port, path);
+            
             connections.add(connection);
             connection.start();
         }
     }
-    
+
+    public long getAverageTps() {
+        return averageTps;
+    }
+
     public void destroy() {
         for (Connection connection : connections) {
             connection.client.close();
             connection.interrupt();
         }
+        
+        vertx.cancelTimer(tpsTimerId);
+        vertx.close();
+    }
+    
+    private long startTpsTimer() {
+        
+        // initialize buckets
+        for (int i = 0; i < 61; i++) {
+            buckets[i] = new AtomicLong(0);
+        }
+
+        // start timer task
+        return this.vertx.setPeriodic(1_000, handler -> {
+
+            int index = 0;
+
+            if (bucketIndex.get() == (buckets.length - 1)) {
+                bucketIndex.set(0);
+                buckets[0].set(0);
+            } else {
+                index = bucketIndex.incrementAndGet();
+                buckets[index].set(0);
+            }
+
+            long total = 0;
+
+            for (int i = 0; i < buckets.length; i++) {
+                if (i != index) {
+                    total = total + buckets[i].get();
+                }
+            }
+
+            averageTps = (total / 60);
+            System.out.printf("Client TPS = [%s]\n", averageTps);
+        });
     }
 
     private static class Connection extends Thread {
@@ -92,15 +147,20 @@ public class VertxLoadTester {
         private final int tpsPerConnection;
         private final WebClient client;
         private final HttpRequest<Buffer> request;
+        private final AtomicInteger bucketIndex;
+        private final AtomicLong[] buckets;
 
         public Connection(Vertx vertx,
                 WebClientOptions webClientOptions,
                 int tpsPerConnection,
+                AtomicInteger bucketIndex, AtomicLong[] buckets,
                 HttpMethod method, String host, int port, String path) {
 
             this.tpsPerConnection = tpsPerConnection;
             this.client = WebClient.create(vertx, webClientOptions);
             this.request = client.request(method, port, host, path);
+            this.bucketIndex = bucketIndex;
+            this.buckets = buckets;
         }
 
         @Override
@@ -111,7 +171,10 @@ public class VertxLoadTester {
                     int counter = 0;
 
                     while (true) {
-                        request.send();
+                        request.send(handler -> {
+                            buckets[bucketIndex.get()].incrementAndGet();
+                        });
+                        
                         if (++counter == tpsPerConnection) {
                             break;
                         }

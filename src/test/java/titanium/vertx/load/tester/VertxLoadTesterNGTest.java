@@ -220,7 +220,7 @@ public class VertxLoadTesterNGTest {
                 }
 
                 AVERAGE_TPS = (total / 60);
-                System.out.printf("TPS = [%s]\n", AVERAGE_TPS);
+                System.out.printf("Server TPS = [%s]\n", AVERAGE_TPS);
             });
         }
 
