@@ -37,7 +37,7 @@ public class VertxLoadTester {
     public static void main(String[] args) {
 
         if (args.length < 7 || args.length > 7) {
-            throw new IllegalArgumentException("Seven argument must be provided.");
+            throw new IllegalArgumentException("Seven arguments must be provided.");
         }
 
         // java VertxLoadTester 10 1000 1000000 POST localhost 8080 /nausf-auth/v1/ue-authentications/
@@ -82,7 +82,6 @@ public class VertxLoadTester {
     
     public void destroy() {
         for (Connection connection : connections) {
-            connection.client.close();
             connection.interrupt();
         }
     }
@@ -132,6 +131,7 @@ public class VertxLoadTester {
         @Override
         public void interrupt() {
             isRunning.set(false);
+            client.close();
         }
     }
 

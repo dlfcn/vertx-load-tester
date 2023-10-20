@@ -29,15 +29,15 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 /**
- * This class starts HTTP server verticles that the load tester client will
- * send requests to.
+ * This class starts HTTP server verticles that the load tester client will send
+ * requests to.
  */
 public class VertxLoadTesterNGTest {
-    
+
     private static Vertx CLIENT_VERTX = null;
     private static Vertx SERVER_VERTX = null;
     private static VertxLoadTester TESTER = null;
-    
+
     @BeforeClass
     public static void setUpClass() throws Exception {
         // do nothing
@@ -45,23 +45,23 @@ public class VertxLoadTesterNGTest {
 
     @AfterClass(alwaysRun = true)
     public static void tearDownClass() throws Exception {
-        
+
         if (TESTER != null) {
             TESTER.destroy();
             TESTER = null;
         }
-        
+
         if (CLIENT_VERTX != null) {
             CLIENT_VERTX.close();
             CLIENT_VERTX = null;
         }
-        
+
         if (SERVER_VERTX != null) {
             SERVER_VERTX.close();
             SERVER_VERTX = null;
         }
     }
-    
+
     @DataProvider
     public Object[][] loadProvider() {
         /*
@@ -72,38 +72,38 @@ public class VertxLoadTesterNGTest {
          */
         return new Object[][]{
             {
-                2, 1_000, 1_000, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
+                2, 1_000, 1_000, 100_000, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
             },
             {
-                10, 6_000, 2_000, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
+                10, 6_000, 2_000, 100_000, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
             }
         };
     }
-    
+
     @Test(dataProvider = "loadProvider")
-    public void test(int numberOfConnections, int tpsPerConnection, int multiplexingLimit, 
-            HttpMethod method, String host, int port, String path) 
+    public void test(int numberOfConnections, int tpsPerConnection, int multiplexingLimit, long blockingNanos,
+            HttpMethod method, String host, int port, String path)
             throws InterruptedException, Exception {
-        
+
         tearDownClass();
         Thread.sleep(500); // wait a sec for threads and verticles to stop
-        
+
         SERVER_VERTX = Vertx.vertx();
-        deployLocalVerticles(SERVER_VERTX, port, multiplexingLimit);
+        deployLocalVerticles(SERVER_VERTX, port, multiplexingLimit, blockingNanos);
         Thread.sleep(500); // wait a sec for verticles to start
-        
+
         CLIENT_VERTX = Vertx.vertx();
-        TESTER = new VertxLoadTester(CLIENT_VERTX, 
-                numberOfConnections, 
-                tpsPerConnection, 
+        TESTER = new VertxLoadTester(CLIENT_VERTX,
+                numberOfConnections,
+                tpsPerConnection,
                 multiplexingLimit,
                 method, host, port, path);
-        
+
         Thread.sleep(5_000); // wait a sec for tps buckets to fill
 
         boolean desiredTpsReached = false;
         int counter = 0;
-        
+
         while (!desiredTpsReached) {
             if (LocalVerticle.AVERAGE_TPS >= (numberOfConnections * tpsPerConnection)) {
                 desiredTpsReached = true;
@@ -116,37 +116,43 @@ public class VertxLoadTesterNGTest {
                 Thread.sleep(10_000);
             }
         }
-        
+
         assertTrue(desiredTpsReached, String.format("Desired TPS of [%s] was not reached within 120 seconds", (numberOfConnections * tpsPerConnection)));
     }
 
-    private static void deployLocalVerticles(final Vertx vertx, final int port, final int multiplexingLimit) {
-        
+    private static void deployLocalVerticles(final Vertx vertx,
+            final int port,
+            final int multiplexingLimit,
+            final long blockingNanos) {
+
         int numberOfVerticles = VertxOptions.DEFAULT_EVENT_LOOP_POOL_SIZE;
         System.out.printf("Deploying [%s] verticles.\n", numberOfVerticles);
-        
-        deployLocalVerticle(vertx, 
+
+        deployLocalVerticle(vertx,
                 port,
                 multiplexingLimit,
-                new AtomicInteger(0), 
+                blockingNanos,
+                new AtomicInteger(0),
                 numberOfVerticles);
-        
+
         LocalVerticle.start(vertx);
     }
 
-    private static void deployLocalVerticle(final Vertx vertx, 
+    private static void deployLocalVerticle(final Vertx vertx,
             final int port,
             final int multiplexingLimit,
-            final AtomicInteger counter, 
+            final long blockingNanos,
+            final AtomicInteger counter,
             final int verticles) {
-        
-        vertx.deployVerticle(new LocalVerticle(port, multiplexingLimit), handler -> {
+
+        vertx.deployVerticle(new LocalVerticle(port, multiplexingLimit, blockingNanos), handler -> {
             if (counter.incrementAndGet() < verticles) {
-                
-                deployLocalVerticle(vertx, 
-                        port, 
-                        multiplexingLimit, 
-                        counter, 
+
+                deployLocalVerticle(vertx,
+                        port,
+                        multiplexingLimit,
+                        blockingNanos,
+                        counter,
                         verticles);
             }
         });
@@ -159,25 +165,27 @@ public class VertxLoadTesterNGTest {
         private static long AVERAGE_TPS = 0; // for the last 60 seconds
         private final int port;
         private final int multiplexingLimit;
+        private final long blockingNanos;
         private HttpServer httpServer;
-        
+
         static {
             for (int i = 0; i < 61; i++) {
                 BUCKETS[i] = new AtomicLong(0);
             }
         }
-        
-        public LocalVerticle(int port, int multiplexingLimit) {
+
+        public LocalVerticle(int port, int multiplexingLimit, long blockingNanos) {
             this.port = port;
             this.multiplexingLimit = multiplexingLimit;
+            this.blockingNanos = blockingNanos;
         }
-        
+
         public static void start(Vertx vertx) {
-            
+
             vertx.setPeriodic(1_000, handler -> {
-                
+
                 int index = 0;
-                
+
                 if (INDEX.get() == (BUCKETS.length - 1)) {
                     INDEX.set(0);
                     BUCKETS[0].set(0);
@@ -185,15 +193,15 @@ public class VertxLoadTesterNGTest {
                     index = INDEX.incrementAndGet();
                     BUCKETS[index].set(0);
                 }
-                
+
                 long total = 0;
-                
+
                 for (int i = 0; i < BUCKETS.length; i++) {
                     if (i != index) {
                         total = total + BUCKETS[i].get();
                     }
                 }
-                
+
                 AVERAGE_TPS = (total / 60);
                 System.out.printf("TPS = [%s]\n", AVERAGE_TPS);
             });
@@ -201,10 +209,10 @@ public class VertxLoadTesterNGTest {
 
         @Override
         public void start() throws Exception {
-            
+
             WorkerExecutor worker = this.vertx.createSharedWorkerExecutor(
                     "worker", 20, 100, TimeUnit.MILLISECONDS);
-            
+
             HttpServerOptions options = new HttpServerOptions();
             options.getInitialSettings().setMaxConcurrentStreams(multiplexingLimit);
             options.setHost("localhost");
@@ -218,22 +226,20 @@ public class VertxLoadTesterNGTest {
                         System.out.println("Connection created.");
                     })
                     .requestHandler(requestHandler -> {
-                        requestHandler.endHandler(endHandler -> {
-                            
-                            Future<HttpServerResponse> future = worker.executeBlocking(handler -> {
-                                
-//                                long endWorkTime = System.currentTimeMillis() + 5;
-//                                while (System.currentTimeMillis() < endWorkTime) {
-//                                    // simulate time to execute service logic
-//                                }
-                                
-                                handler.complete(requestHandler.response());
-                            }, false);
-                            
-                            future.onComplete(handler -> {
-                                handler.result().end();
-                                BUCKETS[INDEX.get()].incrementAndGet();
-                            });
+
+                        Future<HttpServerResponse> future = worker.executeBlocking(handler -> {
+
+                            long endWorkTime = System.nanoTime() + this.blockingNanos;
+                            while (System.nanoTime() < endWorkTime) {
+                                // simulate time to execute service logic
+                            }
+
+                            handler.complete(requestHandler.response());
+                        }, false);
+
+                        future.onComplete(handler -> {
+                            handler.result().end();
+                            BUCKETS[INDEX.get()].incrementAndGet();
                         });
                     })
                     .listen(h -> {
