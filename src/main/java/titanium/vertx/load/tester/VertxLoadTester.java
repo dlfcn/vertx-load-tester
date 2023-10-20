@@ -81,6 +81,7 @@ public class VertxLoadTester {
     
     public void destroy() {
         for (Connection connection : connections) {
+            connection.client.close();
             connection.interrupt();
         }
     }
@@ -125,8 +126,6 @@ public class VertxLoadTester {
                     // do nothing
                 }
             }
-            
-            client.close();
         }
 
         @Override
