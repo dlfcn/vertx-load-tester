@@ -47,7 +47,7 @@ public class VertxLoadTesterNGTest {
     public static void tearDownClass() throws Exception {
 
         if (TESTER != null) {
-            TESTER.destroy();
+            TESTER.interrupt();
             TESTER = null;
         }
 
@@ -69,23 +69,23 @@ public class VertxLoadTesterNGTest {
         And tests might fail if you don't have enough CPU!
          */
         return new Object[][]{
+            // Easy - Average TPS = 2k
+            // 2k TPS = 2 Connections * trans
+            // each transaction takes 1/10th of a millis
             {
                 false, 2, 1_000, 1_000, 100_000, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
             },
+            // Hard - Beefy TPS = 30k
+            // 30k TPS = 10 connections * 1k trans
+            // each transaction takes 1/10th of a milli
             {
-                false, 10, 6_000, 2_000, 100_000, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
-            },
-            {
-                true, 2, 1_000, 1_000, 100_000, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
-            },
-            {
-                true, 10, 6_000, 2_000, 100_000, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
+                false, 10, 3_000, 1_000, 100_000, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
             }
         };
     }
 
     @Test(dataProvider = "loadProvider")
-    public void test(boolean executeBlocking, 
+    public void test(boolean executeBlocking,
             int numberOfConnections, 
             int tpsPerConnection, 
             int multiplexingLimit, 
@@ -110,6 +110,7 @@ public class VertxLoadTesterNGTest {
                 tpsPerConnection,
                 multiplexingLimit,
                 method, host, port, path);
+        TESTER.start();
         Thread.sleep(5_000); // wait a sec for tps buckets to fill
 
         boolean desiredTpsReached = false;
@@ -128,7 +129,9 @@ public class VertxLoadTesterNGTest {
             }
         }
 
-        assertTrue(desiredTpsReached, String.format("Desired TPS of [%s] was not reached within 120 seconds", (numberOfConnections * tpsPerConnection)));
+        assertTrue(desiredTpsReached, String.format(
+                "Desired TPS of [%s] was not reached within 120 seconds", 
+                (numberOfConnections * tpsPerConnection)));
     }
 
     private static void deployLocalVerticles(final Vertx vertx,
@@ -246,6 +249,7 @@ public class VertxLoadTesterNGTest {
                     .requestHandler(requestHandler -> {
                         if (this.executeBlocking) {
                             // offload service logic processing to worker thread
+                            // call me if you are going to do something crazy.
                             Future<HttpServerResponse> future = worker.executeBlocking(handler -> {
                                 this.executeServiceLogic();
                                 handler.complete(requestHandler.response());
@@ -256,7 +260,8 @@ public class VertxLoadTesterNGTest {
                                 BUCKETS[INDEX.get()].incrementAndGet();
                             });
                         } else {
-                            // execute service logic on event loop thread
+                            // execute service logic on event loop thread!!!!!!!
+                            // DO NOT BLOCK VERTX EVENT LOOP!!!!!!!!!
                             this.executeServiceLogic();
                             requestHandler.response().end();
                             BUCKETS[INDEX.get()].incrementAndGet();

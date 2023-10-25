@@ -21,9 +21,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
-public class VertxLoadTester {
+public class VertxLoadTester extends Thread {
+    
+    private static VertxLoadTester TESTER = null;
 
     /**
      * Seven parameters in the following order are required to run this.
@@ -41,7 +42,8 @@ public class VertxLoadTester {
             throw new IllegalArgumentException("Seven arguments must be provided.");
         }
 
-        // java VertxLoadTester 10 1000 1000000 POST localhost 8080 /nausf-auth/v1/ue-authentications/
+        // java VertxLoadTester 10 1000 1000 POST localhost 8080 /nausf-auth/v1/ue-authentications/
+        // should get 10k tps = 10 connections * 1k tps
         int numberOfConnections = Integer.parseInt(args[0]);
         int tpsPerConnection = Integer.parseInt(args[1]);
         int multiplexingLimit = Integer.parseInt(args[2]);
@@ -50,21 +52,16 @@ public class VertxLoadTester {
         int port = Integer.parseInt(args[5]);
         String path = args[6];
 
-        Vertx vertx = Vertx.vertx();
-
-        VertxLoadTester loadTester = new VertxLoadTester(vertx,
+        TESTER = new VertxLoadTester(Vertx.vertx(),
                 numberOfConnections,
                 tpsPerConnection,
                 multiplexingLimit,
                 method, host, port, path);
-
-        // todo - clean up resources
-        // loadTester.destroy();
     }
 
     private final Vertx vertx;
     private final AtomicInteger bucketIndex = new AtomicInteger(0);
-    private final AtomicLong[] buckets = new AtomicLong[61];
+    private final AtomicInteger[] buckets = new AtomicInteger[61]; // do not count bucket index in average tps
     private final long tpsTimerId;
     private long averageTps = 0; // for the last 60 seconds
     private final List<Connection> connections = new ArrayList<>();
@@ -75,12 +72,14 @@ public class VertxLoadTester {
         this.vertx = vertx;
         this.tpsTimerId = this.startTpsTimer();
 
-        WebClientOptions options = new WebClientOptions();
-        options.setProtocolVersion(HttpVersion.HTTP_2);
-        options.setHttp2ClearTextUpgrade(false);
-        options.setHttp2MaxPoolSize(1);
-        options.setHttp2MultiplexingLimit(multiplexingLimit);
+        // do NOT change max pool size! One connection per thread/client!
+        WebClientOptions options = new WebClientOptions()
+                .setProtocolVersion(HttpVersion.HTTP_2)
+                .setHttp2ClearTextUpgrade(false)
+                .setHttp2MaxPoolSize(1)
+                .setHttp2MultiplexingLimit(multiplexingLimit);
 
+        // create threads/clients for sending requests
         for (int i = 0; i < numberOfConnections; i++) {
             
             Connection connection = new Connection(vertx, 
@@ -90,15 +89,22 @@ public class VertxLoadTester {
                     method, host, port, path);
             
             connections.add(connection);
-            connection.start();
         }
     }
 
     public long getAverageTps() {
         return averageTps;
     }
-
-    public void destroy() {
+    
+    @Override
+    public void run() {
+        for (Connection connection : connections) {
+            connection.start();
+        }
+    }
+    
+    @Override
+    public void interrupt() {
         for (Connection connection : connections) {
             connection.client.close();
             connection.interrupt();
@@ -106,16 +112,20 @@ public class VertxLoadTester {
         
         vertx.cancelTimer(tpsTimerId);
         vertx.close();
+        
+        if (TESTER != null) {
+            TESTER = null;
+        }
     }
     
     private long startTpsTimer() {
         
-        // initialize buckets
+        // initialize tps buckets
         for (int i = 0; i < 61; i++) {
-            buckets[i] = new AtomicLong(0);
+            buckets[i] = new AtomicInteger(0);
         }
 
-        // start timer task
+        // start timer task for client response tps
         return this.vertx.setPeriodic(1_000, handler -> {
 
             int index = 0;
@@ -148,12 +158,10 @@ public class VertxLoadTester {
         private final WebClient client;
         private final HttpRequest<Buffer> request;
         private final AtomicInteger bucketIndex;
-        private final AtomicLong[] buckets;
+        private final AtomicInteger[] buckets;
 
-        public Connection(Vertx vertx,
-                WebClientOptions webClientOptions,
-                int tpsPerConnection,
-                AtomicInteger bucketIndex, AtomicLong[] buckets,
+        public Connection(Vertx vertx, WebClientOptions webClientOptions,
+                int tpsPerConnection, AtomicInteger bucketIndex, AtomicInteger[] buckets,
                 HttpMethod method, String host, int port, String path) {
 
             this.tpsPerConnection = tpsPerConnection;

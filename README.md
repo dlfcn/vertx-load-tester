@@ -21,6 +21,3 @@ Note that seven parameters in the following order are required to run the load t
 5. Host of HTTP server being load tested 
 6. Port of HTTP server being load tested 
 7. Path of the HTTP service being load tested
-
-// TODO
-Currently each thread gets its own TCP connection. Implement a way to have multiple threads send requests using the same vertx-web-client/tcp-connection.
