@@ -68,14 +68,14 @@ public class VertxLoadTesterNGTest {
         And tests might fail if you don't have enough CPU!
          */
         return new Object[][]{
-            // Easy - Average TPS = 2k
-            // 2k TPS = 2 Connections * trans
+            // Easy Test - Average TPS = 2k
+            // 2k TPS = 2 Connections * 1k tps (per connection)
             // each transaction takes 1/10th of a millis
             {
                 false, 2, 1_000, 1_000, 100_000, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
             },
-            // Hard - Beefy TPS = 30k
-            // 30k TPS = 10 connections * 1k trans
+            // Stress Test - Average TPS = 30k
+            // 30k TPS = 10 connections * 1k tps (per connection)
             // each transaction takes 1/10th of a milli
             {
                 false, 10, 3_000, 1_000, 100_000, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
