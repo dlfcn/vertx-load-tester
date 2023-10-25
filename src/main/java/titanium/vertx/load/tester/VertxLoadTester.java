@@ -20,7 +20,6 @@ import io.vertx.ext.web.client.WebClientOptions;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 
 public class VertxLoadTester extends Thread {
     
@@ -60,17 +59,13 @@ public class VertxLoadTester extends Thread {
     }
 
     private final Vertx vertx;
-    private final AtomicInteger bucketIndex = new AtomicInteger(0);
-    private final AtomicInteger[] buckets = new AtomicInteger[61]; // do not count bucket index in average tps
-    private final long tpsTimerId;
-    private long averageTps = 0; // for the last 60 seconds
+    private final TpsTimer tpsTimer = new TpsTimer(true);
     private final List<Connection> connections = new ArrayList<>();
 
     public VertxLoadTester(Vertx vertx, int numberOfConnections, int tpsPerConnection, int multiplexingLimit,
             HttpMethod method, String host, int port, String path) {
         
         this.vertx = vertx;
-        this.tpsTimerId = this.startTpsTimer();
 
         // do NOT change max pool size! One connection per thread/client!
         WebClientOptions options = new WebClientOptions()
@@ -85,7 +80,7 @@ public class VertxLoadTester extends Thread {
             Connection connection = new Connection(vertx, 
                     options, 
                     tpsPerConnection, 
-                    bucketIndex, buckets,
+                    tpsTimer,
                     method, host, port, path);
             
             connections.add(connection);
@@ -93,11 +88,12 @@ public class VertxLoadTester extends Thread {
     }
 
     public long getAverageTps() {
-        return averageTps;
+        return this.tpsTimer.getAverageTps();
     }
     
     @Override
     public void run() {
+        tpsTimer.start(vertx);
         for (Connection connection : connections) {
             connection.start();
         }
@@ -110,65 +106,30 @@ public class VertxLoadTester extends Thread {
             connection.interrupt();
         }
         
-        vertx.cancelTimer(tpsTimerId);
+        tpsTimer.stop();
         vertx.close();
         
         if (TESTER != null) {
             TESTER = null;
         }
     }
-    
-    private long startTpsTimer() {
-        
-        // initialize tps buckets
-        for (int i = 0; i < 61; i++) {
-            buckets[i] = new AtomicInteger(0);
-        }
-
-        // start timer task for client response tps
-        return this.vertx.setPeriodic(1_000, handler -> {
-
-            int index = 0;
-
-            if (bucketIndex.get() == (buckets.length - 1)) {
-                bucketIndex.set(0);
-                buckets[0].set(0);
-            } else {
-                index = bucketIndex.incrementAndGet();
-                buckets[index].set(0);
-            }
-
-            long total = 0;
-
-            for (int i = 0; i < buckets.length; i++) {
-                if (i != index) {
-                    total = total + buckets[i].get();
-                }
-            }
-
-            averageTps = (total / 60);
-            System.out.printf("Client TPS = [%s]\n", averageTps);
-        });
-    }
 
     private static class Connection extends Thread {
 
         private boolean running = true;
         private final int tpsPerConnection;
+        private final TpsTimer tpsTimer;
         private final WebClient client;
         private final HttpRequest<Buffer> request;
-        private final AtomicInteger bucketIndex;
-        private final AtomicInteger[] buckets;
 
         public Connection(Vertx vertx, WebClientOptions webClientOptions,
-                int tpsPerConnection, AtomicInteger bucketIndex, AtomicInteger[] buckets,
+                int tpsPerConnection, TpsTimer tpsTimer,
                 HttpMethod method, String host, int port, String path) {
 
             this.tpsPerConnection = tpsPerConnection;
+            this.tpsTimer = tpsTimer;
             this.client = WebClient.create(vertx, webClientOptions);
             this.request = client.request(method, port, host, path);
-            this.bucketIndex = bucketIndex;
-            this.buckets = buckets;
         }
 
         @Override
@@ -180,7 +141,7 @@ public class VertxLoadTester extends Thread {
 
                     while (true) {
                         request.send(handler -> {
-                            buckets[bucketIndex.get()].incrementAndGet();
+                            tpsTimer.increment();
                         });
                         
                         if (++counter == tpsPerConnection) {

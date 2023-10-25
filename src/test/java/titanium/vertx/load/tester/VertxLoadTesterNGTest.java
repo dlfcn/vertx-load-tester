@@ -21,7 +21,6 @@ import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpServerResponse;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import static org.testng.Assert.assertTrue;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
@@ -84,7 +83,7 @@ public class VertxLoadTesterNGTest {
         };
     }
 
-    @Test(dataProvider = "loadProvider")
+    @Test(dataProvider = "loadProvider", timeOut = 120000)
     public void test(boolean executeBlocking,
             int numberOfConnections, 
             int tpsPerConnection, 
@@ -102,6 +101,7 @@ public class VertxLoadTesterNGTest {
                 multiplexingLimit, 
                 blockingNanos, 
                 executeBlocking);
+        LocalVerticle.TPS_TIMER.start(SERVER_VERTX);
         Thread.sleep(1_000); // wait a sec for verticles to start
 
         CLIENT_VERTX = Vertx.vertx();
@@ -114,14 +114,10 @@ public class VertxLoadTesterNGTest {
         Thread.sleep(5_000); // wait a sec for tps buckets to fill
 
         boolean desiredTpsReached = false;
-        int counter = 0;
 
         while (!desiredTpsReached) {
-            if (LocalVerticle.AVERAGE_TPS >= (numberOfConnections * tpsPerConnection)) {
+            if (LocalVerticle.TPS_TIMER.getAverageTps() >= (numberOfConnections * tpsPerConnection)) {
                 desiredTpsReached = true;
-                break;
-            } else if (counter++ == 20) {
-                // desired tps cannot be reached
                 break;
             } else {
                 // will take time for tps buckets to fill
@@ -150,8 +146,6 @@ public class VertxLoadTesterNGTest {
                 executeBlocking,
                 new AtomicInteger(0),
                 numberOfVerticles);
-
-        LocalVerticle.start(vertx);
     }
 
     private static void deployLocalVerticle(final Vertx vertx,
@@ -178,54 +172,18 @@ public class VertxLoadTesterNGTest {
 
     public static class LocalVerticle extends AbstractVerticle {
 
-        private static final AtomicInteger INDEX = new AtomicInteger(0);
-        private static final AtomicLong[] BUCKETS = new AtomicLong[61];
-        private static long TPS_TIMER_ID = -1;
-        private static long AVERAGE_TPS = 0; // for the last 60 seconds
+        private static final TpsTimer TPS_TIMER = new TpsTimer(false);
         private final int port;
         private final int multiplexingLimit;
         private final long blockingNanos;
         private final boolean executeBlocking;
         private HttpServer httpServer;
 
-        static {
-            for (int i = 0; i < 61; i++) {
-                BUCKETS[i] = new AtomicLong(0);
-            }
-        }
-
         public LocalVerticle(int port, int multiplexingLimit, long blockingNanos, boolean executeBlocking) {
             this.port = port;
             this.multiplexingLimit = multiplexingLimit;
             this.blockingNanos = blockingNanos;
             this.executeBlocking = executeBlocking;
-        }
-
-        public static void start(Vertx vertx) {
-
-            TPS_TIMER_ID = vertx.setPeriodic(1_000, handler -> {
-
-                int index = 0;
-
-                if (INDEX.get() == (BUCKETS.length - 1)) {
-                    INDEX.set(0);
-                    BUCKETS[0].set(0);
-                } else {
-                    index = INDEX.incrementAndGet();
-                    BUCKETS[index].set(0);
-                }
-
-                long total = 0;
-
-                for (int i = 0; i < BUCKETS.length; i++) {
-                    if (i != index) {
-                        total = total + BUCKETS[i].get();
-                    }
-                }
-
-                AVERAGE_TPS = (total / 60);
-                System.out.printf("Server TPS = [%s]\n", AVERAGE_TPS);
-            });
         }
 
         @Override
@@ -257,14 +215,14 @@ public class VertxLoadTesterNGTest {
 
                             future.onComplete(handler -> {
                                 handler.result().end();
-                                BUCKETS[INDEX.get()].incrementAndGet();
+                                TPS_TIMER.increment();
                             });
                         } else {
                             // execute service logic on event loop thread!!!!!!!
                             // DO NOT BLOCK VERTX EVENT LOOP!!!!!!!!!
                             this.executeServiceLogic();
                             requestHandler.response().end();
-                            BUCKETS[INDEX.get()].incrementAndGet();
+                            TPS_TIMER.increment();
                         }
                     })
                     .listen(h -> {
@@ -285,14 +243,7 @@ public class VertxLoadTesterNGTest {
                 this.httpServer = null;
             }
             
-            if (TPS_TIMER_ID != -1) {
-                this.vertx.cancelTimer(TPS_TIMER_ID);
-                TPS_TIMER_ID = -1;
-                AVERAGE_TPS = 0;
-                for (AtomicLong bucket : BUCKETS) {
-                    bucket.set(0);
-                }
-            }
+            TPS_TIMER.stop();
         }
         
         private void executeServiceLogic() {
