@@ -18,15 +18,19 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class TpsTimer {
     
-    private Vertx vertx;
+    private final Vertx vertx;
     private long timerId = -1;
-    private final boolean isClient;
+    private final boolean client;
     private final AtomicInteger bucketIndex = new AtomicInteger(0);
     private final AtomicInteger[] buckets = new AtomicInteger[61];
     private long averageTps = 0; // for the last 60 seconds
     
-    public TpsTimer(boolean isClient) {
-        this.isClient = isClient;
+    public TpsTimer(Vertx vertx, boolean client) {
+        
+        this.vertx = vertx;
+        this.client = client;
+        
+        // initialize tps buckets
         for (int i = 0; i < buckets.length; i++) {
             buckets[i] = new AtomicInteger(0);
         }
@@ -40,59 +44,39 @@ public class TpsTimer {
         buckets[bucketIndex.get()].incrementAndGet();
     }
     
-    public void start(Vertx vertx) {
-        
-        if (this.vertx != null) {
-            this.stop();
-        }
-        
-        this.vertx = vertx;
-        
-        // start timer task for client response tps
-        this.timerId = this.vertx.setPeriodic(1_000, handler -> {
+    public synchronized void start() {
 
-            int index = 0;
+        // check if a client has already started timer
+        if (this.timerId == -1) {
 
-            if (bucketIndex.get() == (buckets.length - 1)) {
-                bucketIndex.set(0);
-                buckets[0].set(0);
-            } else {
-                index = bucketIndex.incrementAndGet();
-                buckets[index].set(0);
-            }
+            // start timer task for client response tps
+            this.timerId = this.vertx.setPeriodic(1_000, handler -> {
 
-            long total = 0;
+                int index = 0;
 
-            for (int i = 0; i < buckets.length; i++) {
-                if (i != index) {
-                    // do not count current index in average tps
-                    total = total + buckets[i].get();
+                if (bucketIndex.get() == (buckets.length - 1)) {
+                    bucketIndex.set(0);
+                    buckets[0].set(0);
+                } else {
+                    index = bucketIndex.incrementAndGet();
+                    buckets[index].set(0);
                 }
-            }
 
-            averageTps = (total / 60);
-            
-            System.out.printf("%s TPS = [%s]\n", 
-                    isClient ? "Client" : "Server",  averageTps);
-        });
+                long total = 0;
+
+                for (int i = 0; i < buckets.length; i++) {
+                    if (i != index) {
+                        // do not count current index in average tps
+                        total = total + buckets[i].get();
+                    }
+                }
+
+                averageTps = (total / 60);
+
+                System.out.printf("%s TPS = [%s]\n",
+                        client ? "Client" : "Server", averageTps);
+            });
+        }
     }
     
-    public void stop() {
-        
-        // cancel timer and reset vertx
-        if (vertx != null && timerId != -1) {
-            vertx.cancelTimer(timerId);
-            timerId = -1;
-            vertx = null;
-        }
-        
-        // reset buckets
-        for (AtomicInteger bucket : buckets) {
-            bucket.set(0);
-        }
-        
-        // reset index and tps
-        bucketIndex.set(0);
-        averageTps = 0;
-    }
 }

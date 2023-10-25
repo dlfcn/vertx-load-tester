@@ -1,5 +1,5 @@
 /*
- * Connection.java
+ * Client.java
  *
  * Copyright (c) 2023 Titanium Software Holdings Inc. All Rights Reserved.
  *
@@ -19,32 +19,32 @@ import io.vertx.ext.web.client.WebClientOptions;
 import java.util.concurrent.TimeUnit;
 
 /**
- * A client/thread with one connection that sends requests.
+ * An http client/thread with one connection that sends X number of requests 
+ * per second.
  */
 public class Client extends Thread {
 
     private boolean running = true;
+    private final Vertx vertx;
     private final int tpsPerConnection;
     private final TpsTimer tpsTimer;
     private final WebClient client;
     private final HttpRequest<Buffer> request;
 
-    public Client(Vertx vertx, WebClientOptions webClientOptions,
+    public Client(Vertx vertx, WebClientOptions clientOptions,
             int tpsPerConnection, TpsTimer tpsTimer,
             HttpMethod method, String host, int port, String path) {
 
+        this.vertx = vertx;
         this.tpsPerConnection = tpsPerConnection;
         this.tpsTimer = tpsTimer;
-        this.client = WebClient.create(vertx, webClientOptions);
+        this.client = WebClient.create(vertx, clientOptions);
         this.request = client.request(method, port, host, path);
-    }
-
-    public WebClient getClient() {
-        return client;
     }
 
     @Override
     public void run() {
+        tpsTimer.start();
         while (running) {
             try {
                 long startTime = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(1);
@@ -74,6 +74,7 @@ public class Client extends Thread {
     @Override
     public void interrupt() {
         running = false;
+        vertx.close();
     }
     
 }
