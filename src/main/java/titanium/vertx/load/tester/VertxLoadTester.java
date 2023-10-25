@@ -11,15 +11,11 @@
 package titanium.vertx.load.tester;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpVersion;
-import io.vertx.ext.web.client.HttpRequest;
-import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 public class VertxLoadTester extends Thread {
     
@@ -102,7 +98,7 @@ public class VertxLoadTester extends Thread {
     @Override
     public void interrupt() {
         for (Connection connection : connections) {
-            connection.client.close();
+            connection.getClient().close();
             connection.interrupt();
         }
         
@@ -111,58 +107,6 @@ public class VertxLoadTester extends Thread {
         
         if (TESTER != null) {
             TESTER = null;
-        }
-    }
-
-    private static class Connection extends Thread {
-
-        private boolean running = true;
-        private final int tpsPerConnection;
-        private final TpsTimer tpsTimer;
-        private final WebClient client;
-        private final HttpRequest<Buffer> request;
-
-        public Connection(Vertx vertx, WebClientOptions webClientOptions,
-                int tpsPerConnection, TpsTimer tpsTimer,
-                HttpMethod method, String host, int port, String path) {
-
-            this.tpsPerConnection = tpsPerConnection;
-            this.tpsTimer = tpsTimer;
-            this.client = WebClient.create(vertx, webClientOptions);
-            this.request = client.request(method, port, host, path);
-        }
-
-        @Override
-        public void run() {
-            while (running) {
-                try {
-                    long startTime = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(1);
-                    int counter = 0;
-
-                    while (true) {
-                        request.send(handler -> {
-                            tpsTimer.increment();
-                        });
-                        
-                        if (++counter == tpsPerConnection) {
-                            break;
-                        }
-                    }
-
-                    long sleepMillis = startTime - System.currentTimeMillis();
-
-                    if (sleepMillis > 0) {
-                        Thread.sleep(sleepMillis);
-                    }
-                } catch (Throwable ex) {
-                    // do nothing
-                }
-            }
-        }
-
-        @Override
-        public void interrupt() {
-            running = false;
         }
     }
 
