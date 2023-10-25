@@ -56,7 +56,7 @@ public class VertxLoadTester extends Thread {
 
     private final Vertx vertx;
     private final TpsTimer tpsTimer = new TpsTimer(true);
-    private final List<Connection> connections = new ArrayList<>();
+    private final List<Client> clients = new ArrayList<>();
 
     public VertxLoadTester(Vertx vertx, int numberOfConnections, int tpsPerConnection, int multiplexingLimit,
             HttpMethod method, String host, int port, String path) {
@@ -73,13 +73,13 @@ public class VertxLoadTester extends Thread {
         // create threads/clients for sending requests
         for (int i = 0; i < numberOfConnections; i++) {
             
-            Connection connection = new Connection(vertx, 
+            Client client = new Client(vertx, 
                     options, 
                     tpsPerConnection, 
                     tpsTimer,
                     method, host, port, path);
             
-            connections.add(connection);
+            clients.add(client);
         }
     }
 
@@ -90,16 +90,16 @@ public class VertxLoadTester extends Thread {
     @Override
     public void run() {
         tpsTimer.start(vertx);
-        for (Connection connection : connections) {
-            connection.start();
+        for (Client client : clients) {
+            client.start();
         }
     }
     
     @Override
     public void interrupt() {
-        for (Connection connection : connections) {
-            connection.getClient().close();
-            connection.interrupt();
+        for (Client clients : clients) {
+            clients.getClient().close();
+            clients.interrupt();
         }
         
         tpsTimer.stop();

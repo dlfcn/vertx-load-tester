@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * A client/thread with one connection that sends requests.
  */
-public class Connection extends Thread {
+public class Client extends Thread {
 
     private boolean running = true;
     private final int tpsPerConnection;
@@ -29,7 +29,7 @@ public class Connection extends Thread {
     private final WebClient client;
     private final HttpRequest<Buffer> request;
 
-    public Connection(Vertx vertx, WebClientOptions webClientOptions,
+    public Client(Vertx vertx, WebClientOptions webClientOptions,
             int tpsPerConnection, TpsTimer tpsTimer,
             HttpMethod method, String host, int port, String path) {
 
