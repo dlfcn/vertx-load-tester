@@ -55,7 +55,7 @@ public class VertxLoadTester extends Thread {
                         + "String path");
             }
 
-            // java VertxLoadTester 10 1000 1000 POST localhost 8080 /nausf-auth/v1/ue-authentications/
+            // java VertxLoadTester client 10 1000 1000 POST localhost 8080 /nausf-auth/v1/ue-authentications/
             // should get 10k tps = 10 connections * 1k tps
             int numberOfConnections = Integer.parseInt(args[argIndex++]);
             int tpsPerConnection = Integer.parseInt(args[argIndex++]);
@@ -79,6 +79,7 @@ public class VertxLoadTester extends Thread {
                         + "boolean executeBlocking");
             }
 
+            // java VertxLoadTester server 8080 1000 0 false
             int port = Integer.parseInt(args[argIndex++]);
             int multiplexingLimit = Integer.parseInt(args[argIndex++]);
             long blockingNanos = Long.parseLong(args[argIndex++]);
