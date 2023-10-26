@@ -103,7 +103,6 @@ public class VertxLoadTesterNGTest {
         while (!desiredTpsReached) {
             if (SERVER.getAverageTps() >= (numberOfConnections * tpsPerConnection)) {
                 desiredTpsReached = true;
-                break;
             } else {
                 // will take time for tps buckets to fill
                 Thread.sleep(10_000);

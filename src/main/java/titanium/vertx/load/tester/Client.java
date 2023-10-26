@@ -47,12 +47,14 @@ public class Client extends Thread {
         tpsTimer.start();
         while (running) {
             try {
-                long startTime = System.currentTimeMillis() + TimeUnit.SECONDS.toMillis(1);
+                long startTime = System.currentTimeMillis();
                 int counter = 0;
 
                 while (true) {
+                    final long requestTime = System.nanoTime();
                     request.send(handler -> {
-                        tpsTimer.increment();
+                        long responseTime = System.nanoTime();
+                        tpsTimer.log(responseTime - requestTime);
                     });
 
                     if (++counter == tpsPerConnection) {
@@ -60,7 +62,7 @@ public class Client extends Thread {
                     }
                 }
 
-                long sleepMillis = startTime - System.currentTimeMillis();
+                long sleepMillis = (startTime + 1_000) - System.currentTimeMillis();
 
                 if (sleepMillis > 0) {
                     Thread.sleep(sleepMillis);

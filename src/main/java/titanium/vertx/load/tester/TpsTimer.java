@@ -12,6 +12,7 @@ package titanium.vertx.load.tester;
 
 import io.vertx.core.Vertx;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Tracks average TPS over the past 60 seconds.
@@ -22,8 +23,11 @@ public class TpsTimer {
     private long timerId = -1;
     private final boolean client;
     private final AtomicInteger bucketIndex = new AtomicInteger(0);
-    private final AtomicInteger[] buckets = new AtomicInteger[61];
+    private final AtomicInteger[] tpsBuckets = new AtomicInteger[61];
     private long averageTps = 0; // for the last 60 seconds
+    private final AtomicLong[] latencyBuckets = new AtomicLong[61];
+    private long averageLatency = 0; // for the last 60 seconds
+    private final AtomicLong totalTransactions = new AtomicLong(0);
     
     public TpsTimer(Vertx vertx, boolean client) {
         
@@ -31,8 +35,13 @@ public class TpsTimer {
         this.client = client;
         
         // initialize tps buckets
-        for (int i = 0; i < buckets.length; i++) {
-            buckets[i] = new AtomicInteger(0);
+        for (int i = 0; i < tpsBuckets.length; i++) {
+            tpsBuckets[i] = new AtomicInteger(0);
+        }
+        
+        // intialize latency buckets
+        for (int i = 0; i < latencyBuckets.length; i++) {
+            latencyBuckets[i] = new AtomicLong(0);
         }
     }
 
@@ -40,8 +49,19 @@ public class TpsTimer {
         return averageTps;
     }
     
-    public void increment() {
-        buckets[bucketIndex.get()].incrementAndGet();
+    public long getAverageLatency() {
+        return averageLatency;
+    }
+    
+    public long getTotalTransactions() {
+        return totalTransactions.get();
+    }
+    
+    public void log(long latencyNanos) {
+        int index = bucketIndex.get();
+        tpsBuckets[index].incrementAndGet();
+        latencyBuckets[index].addAndGet(latencyNanos);
+        totalTransactions.incrementAndGet();
     }
     
     public synchronized void start() {
@@ -54,27 +74,37 @@ public class TpsTimer {
 
                 int index = 0;
 
-                if (bucketIndex.get() == (buckets.length - 1)) {
+                if (bucketIndex.get() == (tpsBuckets.length - 1)) {
                     bucketIndex.set(0);
-                    buckets[0].set(0);
+                    tpsBuckets[0].set(0);
+                    latencyBuckets[0].set(0);
                 } else {
                     index = bucketIndex.incrementAndGet();
-                    buckets[index].set(0);
+                    tpsBuckets[index].set(0);
+                    latencyBuckets[index].set(0);
                 }
 
-                long total = 0;
+                long totalTps = 0;
+                long totalLatency = 0;
 
-                for (int i = 0; i < buckets.length; i++) {
+                for (int i = 0; i < tpsBuckets.length; i++) {
                     if (i != index) {
-                        // do not count current index in average tps
-                        total = total + buckets[i].get();
+                        // do not count current index
+                        int tps = tpsBuckets[i].get();
+                        long latency = latencyBuckets[i].get();
+                        
+                        if (tps > 0) {
+                            totalTps = totalTps + tps;
+                            totalLatency = totalLatency + (latency / tps);
+                        }
                     }
                 }
 
-                averageTps = (total / 60);
+                averageTps = (totalTps / 60);
+                averageLatency = (totalLatency / 60);
 
-                System.out.printf("%s TPS = [%s]\n",
-                        client ? "Client" : "Server", averageTps);
+                System.out.printf("%s TPS = [%s], Latency = [%s nanos], Total Transactions = [%s]\n",
+                        client ? "Client" : "Server", averageTps, averageLatency, totalTransactions.get());
             });
         }
     }

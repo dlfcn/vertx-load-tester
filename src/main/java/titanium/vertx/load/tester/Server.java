@@ -96,6 +96,9 @@ public class Server {
                         System.out.println("Connection created.");
                     })
                     .requestHandler(requestHandler -> {
+                        
+                        long receiveTime = System.nanoTime();
+                        
                         if (this.executeBlocking) {
                             // offload service logic processing to worker thread
                             // call me if you are going to do something crazy.
@@ -106,14 +109,14 @@ public class Server {
 
                             future.onComplete(handler -> {
                                 handler.result().end();
-                                tpsTimer.increment();
+                                tpsTimer.log(System.nanoTime() - receiveTime);
                             });
                         } else {
                             // execute service logic on event loop thread!!!!!!!
                             // DO NOT BLOCK VERTX EVENT LOOP!!!!!!!!!
                             this.executeServiceLogic();
                             requestHandler.response().end();
-                            tpsTimer.increment();
+                            tpsTimer.log(System.nanoTime() - receiveTime);
                         }
                     })
                     .listen(h -> {
