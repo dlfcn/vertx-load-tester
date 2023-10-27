@@ -8,8 +8,11 @@
  *
  * @author Titanium Software Holdings Inc.
  */
-package titanium.vertx.load.tester.configuration;
+package titanium.vertx.load.tester.config;
 
+import titanium.vertx.load.tester.config.ClientConfiguration;
+import titanium.vertx.load.tester.config.TestConfiguration;
+import titanium.vertx.load.tester.config.ServerConfiguration;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import io.vertx.json.schema.JsonSchemaValidationException;

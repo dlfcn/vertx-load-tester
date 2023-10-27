@@ -8,8 +8,9 @@
  *
  * @author Titanium Software Holdings Inc.
  */
-package titanium.vertx.load.tester.configuration;
+package titanium.vertx.load.tester.config;
 
+import titanium.vertx.load.tester.config.ServerConfiguration;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import static org.testng.Assert.*;

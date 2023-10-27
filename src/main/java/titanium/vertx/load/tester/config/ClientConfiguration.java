@@ -8,7 +8,7 @@
  *
  * @author Titanium Software Holdings Inc.
  */
-package titanium.vertx.load.tester.configuration;
+package titanium.vertx.load.tester.config;
 
 import io.vertx.core.MultiMap;
 import io.vertx.core.http.HttpMethod;
