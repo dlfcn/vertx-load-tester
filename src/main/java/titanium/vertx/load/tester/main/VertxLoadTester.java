@@ -22,14 +22,11 @@ public class VertxLoadTester extends Thread {
     private static VertxLoadTester INSTANCE = null;
 
     /**
-     * Seven parameters in the following order are required to run this.
-     *
-     * 1. Desired number of connection(s) 2. Desired TPS per connection 3.
-     * Multiplexing limit for each connection 4. HTTP method of the request 5.
-     * Host of HTTP server being load tested 6. Port of HTTP server being load
-     * tested 7. Path of the HTTP service being load tested
-     *
-     * @param args
+     * First argument must be "client" or "server". The seconds argument must 
+     * be the path to the configuration file. See README file for expected 
+     * json schema.
+     * 
+     * @param args to start client or server
      */
     public static void main(String[] args) {
 

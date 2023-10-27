@@ -11,6 +11,7 @@
 package titanium.vertx.load.tester.config;
 
 import io.vertx.core.MultiMap;
+import io.vertx.core.VertxOptions;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 
@@ -24,6 +25,7 @@ public class ServerConfiguration {
     private final int statusCode;
     private final MultiMap headers;
     private final String body;
+    private final int verticles;
     private final int multiplexingLimit;
     private final int blockingNanos;
     private final boolean executeBlocking;
@@ -34,6 +36,7 @@ public class ServerConfiguration {
         this.statusCode = config.getInteger("statusCode", 200);
         this.headers = MultiMap.caseInsensitiveMultiMap();
         this.body = config.getString("body", null);
+        this.verticles = config.getInteger("verticles", VertxOptions.DEFAULT_EVENT_LOOP_POOL_SIZE);
         this.multiplexingLimit = config.getInteger("multiplexingLimit", 1_000);
         this.blockingNanos = config.getInteger("blockingNanos", 0);
         this.executeBlocking = config.getBoolean("executeBlocking", false);
@@ -47,12 +50,13 @@ public class ServerConfiguration {
         }
     }
 
-    public ServerConfiguration(String host, int port, int statusCode, MultiMap headers, String body, int multiplexingLimit, int blockingNanos, boolean executeBlocking) {
+    public ServerConfiguration(String host, int port, int statusCode, MultiMap headers, String body, int verticles, int multiplexingLimit, int blockingNanos, boolean executeBlocking) {
         this.host = host;
         this.port = port;
         this.statusCode = statusCode;
         this.headers = headers;
         this.body = body;
+        this.verticles = verticles;
         this.multiplexingLimit = multiplexingLimit;
         this.blockingNanos = blockingNanos;
         this.executeBlocking = executeBlocking;
@@ -76,6 +80,10 @@ public class ServerConfiguration {
 
     public String getBody() {
         return body;
+    }
+
+    public int getVerticles() {
+        return verticles;
     }
 
     public int getMultiplexingLimit() {

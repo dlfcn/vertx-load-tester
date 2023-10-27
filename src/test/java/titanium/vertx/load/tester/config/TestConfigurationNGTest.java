@@ -53,7 +53,7 @@ public class TestConfigurationNGTest {
     @Test
     public void validClientConfigTest() {
     
-        ClientConfiguration config = TestConfiguration.getClientConfiguration(baseDirectory + "client_config.json");
+        ClientConfiguration config = TestConfiguration.getClientConfiguration(baseDirectory + "config.json");
         
         assertEquals(config.getNumberOfConnections(), 10);
         assertEquals(config.getTpsPerConnection(), 1_000);
@@ -77,7 +77,7 @@ public class TestConfigurationNGTest {
     @Test
     public void serverConfigTest() {
         
-        ServerConfiguration config = TestConfiguration.getServerConfiguration(baseDirectory + "server_config.json");
+        ServerConfiguration config = TestConfiguration.getServerConfiguration(baseDirectory + "config.json");
         
         assertEquals(config.getHost(), "localhost");
         assertEquals(config.getPort(), 8080);

@@ -10,6 +10,7 @@
  */
 package titanium.vertx.load.tester.config;
 
+import io.vertx.core.VertxOptions;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import static org.testng.Assert.*;
@@ -28,6 +29,7 @@ public class ServerConfigurationNGTest {
         assertEquals(config.getStatusCode(), 200);
         assertEquals(config.getHeaders().size(), 0);
         assertNull(config.getBody());
+        assertEquals(config.getVerticles(), VertxOptions.DEFAULT_EVENT_LOOP_POOL_SIZE);
         assertEquals(config.getMultiplexingLimit(), 1_000);
         assertEquals(config.getBlockingNanos(), 0);
         assertFalse(config.isExecuteBlocking());
@@ -41,6 +43,7 @@ public class ServerConfigurationNGTest {
         json.put("port", 9090);
         json.put("statusCode", 302);
         json.put("body", "{}");
+        json.put("verticles", 1);
         json.put("multiplexingLimit", 2_000);
         json.put("blockingNanos", 100_000);
         json.put("executeBlocking", true);
@@ -70,6 +73,7 @@ public class ServerConfigurationNGTest {
         assertEquals(config.getStatusCode(), 302);
         assertEquals(config.getHeaders().size(), 2);
         assertEquals(config.getBody(), "{}");
+        assertEquals(config.getVerticles(), 1);
         assertEquals(config.getMultiplexingLimit(), 2_000);
         assertEquals(config.getBlockingNanos(), 100_000);
         assertTrue(config.isExecuteBlocking());

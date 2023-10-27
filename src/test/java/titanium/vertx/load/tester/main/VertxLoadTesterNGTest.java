@@ -89,6 +89,7 @@ public class VertxLoadTesterNGTest {
                 200, 
                 MultiMap.caseInsensitiveMultiMap(),
                 null,
+                numberOfConnections,
                 multiplexingLimit,
                 blockingNanos,
                 executeBlocking);

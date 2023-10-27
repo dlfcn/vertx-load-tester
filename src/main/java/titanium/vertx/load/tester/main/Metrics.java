@@ -15,7 +15,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
- * Tracks average TPS over the past 60 seconds.
+ * Tracks average latency, average tps, and total transactions. Note that 
+ * averages are based on the past sixty seconds.
  */
 public class Metrics {
     

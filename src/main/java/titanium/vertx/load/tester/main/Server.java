@@ -13,7 +13,6 @@ package titanium.vertx.load.tester.main;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.VertxOptions;
 import io.vertx.core.WorkerExecutor;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
@@ -23,7 +22,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import titanium.vertx.load.tester.config.ServerConfiguration;
 
 /**
- * An http server with a number of event loops threads equal to 2x cpu cores.
+ * An http server with the desired number of verticles/event-loop-threads 
+ * to process requests. Default number of verticles is 2x cpu cores. Each 
+ * event loop thread processes requests for one TCP connection. Event loop 
+ * threads are assigned new TCP connections in a round robin fashion.
  */
 public class Server {
 
@@ -42,16 +44,15 @@ public class Server {
     }
 
     public void start() {
-        int numberOfVerticles = VertxOptions.DEFAULT_EVENT_LOOP_POOL_SIZE;
-        System.out.printf("Deploying [%s] verticles.\n", numberOfVerticles);
+        System.out.printf("Deploying [%s] verticles.\n", config.getVerticles());
         this.tpsTimer.start();
-        this.deployLocalVerticle(new AtomicInteger(0), numberOfVerticles);
+        this.deployLocalVerticle(new AtomicInteger(0));
     }
 
-    private void deployLocalVerticle(final AtomicInteger counter, final int verticles) {
+    private void deployLocalVerticle(final AtomicInteger counter) {
         vertx.deployVerticle(new LocalVerticle(config, tpsTimer), handler -> {
-            if (counter.incrementAndGet() < verticles) {
-                this.deployLocalVerticle(counter, verticles);
+            if (counter.incrementAndGet() < config.getVerticles()) {
+                this.deployLocalVerticle(counter);
             }
         });
     }
