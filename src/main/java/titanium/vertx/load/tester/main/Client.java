@@ -8,7 +8,7 @@
  *
  * @author Titanium Software Holdings Inc.
  */
-package titanium.vertx.load.tester;
+package titanium.vertx.load.tester.main;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;

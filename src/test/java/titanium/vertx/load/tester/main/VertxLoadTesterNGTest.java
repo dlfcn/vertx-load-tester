@@ -8,8 +8,9 @@
  *
  * @author Titanium Software Holdings Inc.
  */
-package titanium.vertx.load.tester;
+package titanium.vertx.load.tester.main;
 
+import titanium.vertx.load.tester.main.VertxLoadTester;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
 import static org.testng.Assert.assertTrue;

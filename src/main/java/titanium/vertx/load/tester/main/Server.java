@@ -8,7 +8,7 @@
  *
  * @author Titanium Software Holdings Inc.
  */
-package titanium.vertx.load.tester;
+package titanium.vertx.load.tester.main;
 
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
