@@ -47,12 +47,23 @@ public class Client extends Thread {
                 .setHttp2MaxPoolSize(1)
                 .setHttp2MultiplexingLimit(config.getMultiplexingLimit());
         
+        // create client/connection
         WebClient client = WebClient.create(vertx, clientOptions);
         
+        // create request
         HttpRequest<Buffer> request = client.request(config.getHttpMethod(), 
                 config.getPort(), 
                 config.getHost(), 
                 config.getPath());
+        
+        // add headers to request
+        request.headers().addAll(config.getHeaders());
+        
+        // create body buffer
+        Buffer body = null;
+        if (config.getBody() != null) {
+            body = Buffer.buffer(config.getBody());
+        }
         
         while (running) {
             try {
@@ -62,11 +73,18 @@ public class Client extends Thread {
                 while (true) {
                     final long requestTime = System.nanoTime();
                     
-                    request.send(handler -> {
-                        long responseTime = System.nanoTime();
-                        tpsTimer.log(responseTime - requestTime);
-                    });
-
+                    if (body == null) {
+                        request.send(handler -> {
+                            long responseTime = System.nanoTime();
+                            tpsTimer.log(responseTime - requestTime);
+                        });
+                    } else {
+                        request.sendBuffer(body, handler -> {
+                            long responseTime = System.nanoTime();
+                            tpsTimer.log(responseTime - requestTime);
+                        });
+                    }
+                    
                     if (++counter == config.getTpsPerConnection()) {
                         break;
                     }

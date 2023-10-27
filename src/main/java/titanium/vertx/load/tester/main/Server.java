@@ -42,10 +42,8 @@ public class Server {
     }
 
     public void start() {
-
         int numberOfVerticles = VertxOptions.DEFAULT_EVENT_LOOP_POOL_SIZE;
         System.out.printf("Deploying [%s] verticles.\n", numberOfVerticles);
-
         this.tpsTimer.start();
         this.deployLocalVerticle(new AtomicInteger(0), numberOfVerticles);
     }
@@ -100,14 +98,14 @@ public class Server {
                             }, false);
 
                             future.onComplete(handler -> {
-                                handler.result().end();
+                                this.sendResponse(handler.result());
                                 tpsTimer.log(System.nanoTime() - receiveTime);
                             });
                         } else {
                             // execute service logic on event loop thread!!!!!!!
                             // DO NOT BLOCK VERTX EVENT LOOP!!!!!!!!!
                             this.executeServiceLogic();
-                            requestHandler.response().end();
+                            this.sendResponse(requestHandler.response());
                             tpsTimer.log(System.nanoTime() - receiveTime);
                         }
                     })
@@ -133,6 +131,18 @@ public class Server {
             long endWorkTime = System.nanoTime() + config.getBlockingNanos();
             while (System.nanoTime() < endWorkTime) {
                 // simulate time to execute service logic
+            }
+        }
+        
+        private void sendResponse(HttpServerResponse response) {
+            
+            response.setStatusCode(config.getStatusCode());
+            response.headers().addAll(config.getHeaders());
+            
+            if (config.getBody() == null) {
+                response.end();
+            } else {
+                response.end(config.getBody());
             }
         }
     }
