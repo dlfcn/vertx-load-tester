@@ -243,7 +243,8 @@ public class TestConfiguration {
             + "    }"
             + "}";
 
-    private static final JsonSchema JSON_SCHEMA = JsonSchema.of(new JsonObject(JSON_SCHEMA_STRING));
+    private static final JsonObject JSON_OBJECT = new JsonObject(JSON_SCHEMA_STRING);
+    private static final JsonSchema JSON_SCHEMA = JsonSchema.of(JSON_OBJECT);
     private static final JsonSchemaOptions JSON_SCHEMA_OPTIONS = new JsonSchemaOptions().setDraft(Draft.DRAFT7).setBaseUri("https://vertx.io");
     private static final Validator JSON_VALIDATOR = Validator.create(JSON_SCHEMA, JSON_SCHEMA_OPTIONS);
 

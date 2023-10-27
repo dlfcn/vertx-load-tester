@@ -119,6 +119,10 @@ Json schema for client and server configuration...
           "description" : "Body of the HTTP response.",
           "type" : "string"
         },
+        "verticles" : {
+          "description" : "Number of HTTP service verticles. Default is 2x cpu cores.",
+          "type" : "integer"
+        },
         "multiplexingLimit" : {
           "description" : "Multiplexing limit for each TCP connection. How many streams/transactions should one TCP connection support?",
           "type" : "integer",
