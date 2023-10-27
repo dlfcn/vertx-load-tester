@@ -10,7 +10,6 @@
  */
 package titanium.vertx.load.tester.config;
 
-import titanium.vertx.load.tester.config.ClientConfiguration;
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
@@ -25,7 +24,6 @@ public class ClientConfigurationNGTest {
         JsonObject json = new JsonObject();
         ClientConfiguration config = new ClientConfiguration(json);
 
-        assertEquals(config.getConfig().encode(), json.encode());
         assertEquals(config.getNumberOfConnections(), 1);
         assertEquals(config.getTpsPerConnection(), 100);
         assertEquals(config.getMultiplexingLimit(), 1_000);
@@ -70,7 +68,6 @@ public class ClientConfigurationNGTest {
 
         ClientConfiguration config = new ClientConfiguration(json);
 
-        assertEquals(config.getConfig().encode(), json.encode());
         assertEquals(config.getNumberOfConnections(), 2);
         assertEquals(config.getTpsPerConnection(), 200);
         assertEquals(config.getMultiplexingLimit(), 2_000);

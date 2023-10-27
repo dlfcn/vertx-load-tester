@@ -19,7 +19,6 @@ import io.vertx.core.json.JsonObject;
  */
 public class ServerConfiguration {
     
-    private final JsonObject config;
     private final String host;
     private final int port;
     private final int statusCode;
@@ -30,7 +29,6 @@ public class ServerConfiguration {
     private final boolean executeBlocking;
     
     public ServerConfiguration(JsonObject config) {
-        this.config = config;
         this.host = config.getString("host", "localhost");
         this.port = config.getInteger("port", 8080);
         this.statusCode = config.getInteger("statusCode", 200);
@@ -49,8 +47,15 @@ public class ServerConfiguration {
         }
     }
 
-    public JsonObject getConfig() {
-        return config;
+    public ServerConfiguration(String host, int port, int statusCode, MultiMap headers, String body, int multiplexingLimit, int blockingNanos, boolean executeBlocking) {
+        this.host = host;
+        this.port = port;
+        this.statusCode = statusCode;
+        this.headers = headers;
+        this.body = body;
+        this.multiplexingLimit = multiplexingLimit;
+        this.blockingNanos = blockingNanos;
+        this.executeBlocking = executeBlocking;
     }
 
     public String getHost() {

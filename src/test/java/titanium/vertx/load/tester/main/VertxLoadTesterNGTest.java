@@ -10,7 +10,7 @@
  */
 package titanium.vertx.load.tester.main;
 
-import titanium.vertx.load.tester.main.VertxLoadTester;
+import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
 import static org.testng.Assert.assertTrue;
@@ -18,7 +18,8 @@ import org.testng.annotations.AfterClass;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
-import titanium.vertx.load.tester.config.TestConfiguration;
+import titanium.vertx.load.tester.config.ClientConfiguration;
+import titanium.vertx.load.tester.config.ServerConfiguration;
 
 /**
  * This class starts HTTP server verticles that the load tester client will send
@@ -75,7 +76,7 @@ public class VertxLoadTesterNGTest {
             int numberOfConnections, 
             int tpsPerConnection, 
             int multiplexingLimit, 
-            long blockingNanos,
+            int blockingNanos,
             HttpMethod method, String host, int port, String path)
             throws InterruptedException, Exception {
 
@@ -83,20 +84,28 @@ public class VertxLoadTesterNGTest {
         Thread.sleep(1_000); // wait a sec for threads and verticles to stop
 
         // create and start server
-        SERVER = new VertxLoadTester(Vertx.vertx(), 
+        ServerConfiguration serverConfig = new ServerConfiguration(host, 
                 port, 
-                multiplexingLimit, 
-                blockingNanos, 
+                200, 
+                MultiMap.caseInsensitiveMultiMap(),
+                null,
+                multiplexingLimit,
+                blockingNanos,
                 executeBlocking);
+        
+        SERVER = new VertxLoadTester(Vertx.vertx(), serverConfig);
         SERVER.start();
         Thread.sleep(1_000); // wait a sec for verticles to start
 
         // create and start client
-        CLIENT = new VertxLoadTester(Vertx.vertx(),
-                numberOfConnections,
+        ClientConfiguration clientConfig = new ClientConfiguration(numberOfConnections,
                 tpsPerConnection,
                 multiplexingLimit,
-                method, host, port, path);
+                method, host, port, path,
+                MultiMap.caseInsensitiveMultiMap(),
+                null);
+        
+        CLIENT = new VertxLoadTester(Vertx.vertx(), clientConfig);
         CLIENT.start();
         Thread.sleep(5_000); // wait a sec for tps buckets to fill
 

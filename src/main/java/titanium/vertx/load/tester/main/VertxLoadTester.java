@@ -11,12 +11,11 @@
 package titanium.vertx.load.tester.main;
 
 import io.vertx.core.Vertx;
-import io.vertx.core.http.HttpMethod;
-import io.vertx.core.http.HttpServerOptions;
-import io.vertx.core.http.HttpVersion;
-import io.vertx.ext.web.client.WebClientOptions;
 import java.util.ArrayList;
 import java.util.List;
+import titanium.vertx.load.tester.config.ClientConfiguration;
+import titanium.vertx.load.tester.config.ServerConfiguration;
+import titanium.vertx.load.tester.config.TestConfiguration;
 
 public class VertxLoadTester extends Thread {
 
@@ -36,6 +35,8 @@ public class VertxLoadTester extends Thread {
 
         if (args.length == 0) {
             throw new IllegalArgumentException("Zero arguments provided!");
+        } else if (args.length < 2) {
+            throw new IllegalArgumentException("Two arguments required!");
         } else if (!args[0].equals("client") && !args[0].equals("server")) {
             throw new IllegalArgumentException("First argument must be [client] or [server]!");
         }
@@ -44,52 +45,11 @@ public class VertxLoadTester extends Thread {
         boolean client = args[argIndex++].equals("client");
 
         if (client) {
-            if ((args.length - 1) != 7) {
-                throw new IllegalArgumentException("Additional client arguments required: "
-                        + "int numberOfConnections, "
-                        + "int tpsPerConnection, "
-                        + "int multiplexingLimit, "
-                        + "String httpMethod, "
-                        + "String host, "
-                        + "int port, "
-                        + "String path");
-            }
-
-            // java VertxLoadTester client 10 1000 1000 POST localhost 8080 /nausf-auth/v1/ue-authentications/
-            // should get 10k tps = 10 connections * 1k tps
-            int numberOfConnections = Integer.parseInt(args[argIndex++]);
-            int tpsPerConnection = Integer.parseInt(args[argIndex++]);
-            int multiplexingLimit = Integer.parseInt(args[argIndex++]);
-            HttpMethod method = HttpMethod.valueOf(args[argIndex++]);
-            String host = args[argIndex++];
-            int port = Integer.parseInt(args[argIndex++]);
-            String path = args[argIndex++];
-
-            INSTANCE = new VertxLoadTester(Vertx.vertx(),
-                    numberOfConnections,
-                    tpsPerConnection,
-                    multiplexingLimit,
-                    method, host, port, path);
+            ClientConfiguration config = TestConfiguration.getClientConfiguration(args[1]);
+            INSTANCE = new VertxLoadTester(Vertx.vertx(), config);
         } else {
-            if ((args.length - 1) != 4) {
-                throw new IllegalArgumentException("Additional server arguments required: "
-                        + "int port, "
-                        + "int multiplexingLimit, "
-                        + "int blockingNanos, "
-                        + "boolean executeBlocking");
-            }
-
-            // java VertxLoadTester server 8080 1000 0 false
-            int port = Integer.parseInt(args[argIndex++]);
-            int multiplexingLimit = Integer.parseInt(args[argIndex++]);
-            long blockingNanos = Long.parseLong(args[argIndex++]);
-            boolean executeBlocking = Boolean.parseBoolean(args[argIndex++]);
-
-            INSTANCE = new VertxLoadTester(Vertx.vertx(),
-                    port,
-                    multiplexingLimit,
-                    blockingNanos,
-                    executeBlocking);
+            ServerConfiguration config = TestConfiguration.getServerConfiguration(args[1]);
+            INSTANCE = new VertxLoadTester(Vertx.vertx(), config);
         }
         
         INSTANCE.start();
@@ -103,38 +63,15 @@ public class VertxLoadTester extends Thread {
      * Creates a client load tester.
      *
      * @param vertx used to create web clients that send http requests
-     * @param numberOfConnections number of clients that will be created
-     * @param tpsPerConnection number of requests each client will send per
-     * second
-     * @param multiplexingLimit number of concurrent transactions supported
-     * @param method of the http request
-     * @param host of the http request
-     * @param port of the http request
-     * @param path of the http request
+     * @param config for the clients
      */
-    public VertxLoadTester(Vertx vertx,
-            int numberOfConnections,
-            int tpsPerConnection,
-            int multiplexingLimit,
-            HttpMethod method, String host, int port, String path) {
-
+    public VertxLoadTester(Vertx vertx, ClientConfiguration config) {
         this.tpsTimer = new TpsTimer(vertx, true);
         this.server = null;
 
-        // do NOT change max pool size! One connection per thread/client!
-        WebClientOptions clientOptions = new WebClientOptions()
-                .setProtocolVersion(HttpVersion.HTTP_2)
-                .setHttp2ClearTextUpgrade(false)
-                .setHttp2MaxPoolSize(1)
-                .setHttp2MultiplexingLimit(multiplexingLimit);
-
         // create threads/clients for sending requests
-        for (int i = 0; i < numberOfConnections; i++) {
-            this.clientList.add(new Client(vertx,
-                    clientOptions,
-                    tpsPerConnection,
-                    tpsTimer,
-                    method, host, port, path));
+        for (int i = 0; i < config.getNumberOfConnections(); i++) {
+            this.clientList.add(new Client(vertx, config, tpsTimer));
         }
     }
 
@@ -142,25 +79,11 @@ public class VertxLoadTester extends Thread {
      * Creates a server load tester.
      *
      * @param vertx used to create server verticles
-     * @param port on which the service should listen
-     * @param multiplexingLimit number of concurrent transactions supported
-     * @param blockingNanos used to simulate duration to execute service logic
-     * @param executeBlocking if processing should be done by worker thread
-     * instead of event loop
+     * @param config for the server
      */
-    public VertxLoadTester(Vertx vertx,
-            int port,
-            int multiplexingLimit,
-            long blockingNanos,
-            boolean executeBlocking) {
-        
-        HttpServerOptions serverOptions = new HttpServerOptions();
-        serverOptions.getInitialSettings().setMaxConcurrentStreams(multiplexingLimit);
-        serverOptions.setHost("localhost");
-        serverOptions.setPort(port);
-                
+    public VertxLoadTester(Vertx vertx, ServerConfiguration config) {
         this.tpsTimer = new TpsTimer(vertx, false);
-        this.server = new Server(vertx, serverOptions, tpsTimer, blockingNanos, executeBlocking);
+        this.server = new Server(vertx, config, tpsTimer);
     }
 
     public long getAverageTps() {

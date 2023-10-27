@@ -12,11 +12,11 @@ package titanium.vertx.load.tester.main;
 
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.HttpVersion;
 import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
-import java.util.concurrent.TimeUnit;
+import titanium.vertx.load.tester.config.ClientConfiguration;
 
 /**
  * An http client/thread with one connection that sends X number of requests 
@@ -26,25 +26,34 @@ public class Client extends Thread {
 
     private boolean running = true;
     private final Vertx vertx;
-    private final int tpsPerConnection;
+    private final ClientConfiguration config;
     private final TpsTimer tpsTimer;
-    private final WebClient client;
-    private final HttpRequest<Buffer> request;
 
-    public Client(Vertx vertx, WebClientOptions clientOptions,
-            int tpsPerConnection, TpsTimer tpsTimer,
-            HttpMethod method, String host, int port, String path) {
-
+    public Client(Vertx vertx, ClientConfiguration config, TpsTimer tpsTimer) {
         this.vertx = vertx;
-        this.tpsPerConnection = tpsPerConnection;
+        this.config = config;
         this.tpsTimer = tpsTimer;
-        this.client = WebClient.create(vertx, clientOptions);
-        this.request = client.request(method, port, host, path);
     }
 
     @Override
     public void run() {
+        
         tpsTimer.start();
+        
+        // do NOT change max pool size! One connection per thread/client!
+        WebClientOptions clientOptions = new WebClientOptions()
+                .setProtocolVersion(HttpVersion.HTTP_2)
+                .setHttp2ClearTextUpgrade(false)
+                .setHttp2MaxPoolSize(1)
+                .setHttp2MultiplexingLimit(config.getMultiplexingLimit());
+        
+        WebClient client = WebClient.create(vertx, clientOptions);
+        
+        HttpRequest<Buffer> request = client.request(config.getHttpMethod(), 
+                config.getPort(), 
+                config.getHost(), 
+                config.getPath());
+        
         while (running) {
             try {
                 long startTime = System.currentTimeMillis();
@@ -52,12 +61,13 @@ public class Client extends Thread {
 
                 while (true) {
                     final long requestTime = System.nanoTime();
+                    
                     request.send(handler -> {
                         long responseTime = System.nanoTime();
                         tpsTimer.log(responseTime - requestTime);
                     });
 
-                    if (++counter == tpsPerConnection) {
+                    if (++counter == config.getTpsPerConnection()) {
                         break;
                     }
                 }

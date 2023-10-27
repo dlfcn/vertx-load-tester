@@ -10,7 +10,6 @@
  */
 package titanium.vertx.load.tester.config;
 
-import titanium.vertx.load.tester.config.ServerConfiguration;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import static org.testng.Assert.*;
@@ -24,7 +23,6 @@ public class ServerConfigurationNGTest {
         JsonObject json = new JsonObject();
         ServerConfiguration config = new ServerConfiguration(json);
 
-        assertEquals(config.getConfig().encode(), json.encode());
         assertEquals(config.getHost(), "localhost");
         assertEquals(config.getPort(), 8080);
         assertEquals(config.getStatusCode(), 200);
@@ -67,7 +65,6 @@ public class ServerConfigurationNGTest {
 
         ServerConfiguration config = new ServerConfiguration(json);
 
-        assertEquals(config.getConfig().encode(), json.encode());
         assertEquals(config.getHost(), "1.1.1.1");
         assertEquals(config.getPort(), 9090);
         assertEquals(config.getStatusCode(), 302);

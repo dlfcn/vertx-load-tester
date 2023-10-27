@@ -20,6 +20,7 @@ import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.HttpServerResponse;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import titanium.vertx.load.tester.config.ServerConfiguration;
 
 /**
  * An http server with a number of event loops threads equal to 2x cpu cores.
@@ -27,19 +28,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Server {
 
     private final Vertx vertx;
+    private final ServerConfiguration config;
     private final TpsTimer tpsTimer;
-    private final HttpServerOptions serverOptions;
-    private final long blockingNanos;
-    private final boolean executeBlocking;
 
-    public Server(Vertx vertx, HttpServerOptions serverOptions,
-            TpsTimer tpsTimer, long blockingNanos, boolean executeBlocking) {
-
+    public Server(Vertx vertx, ServerConfiguration config, TpsTimer tpsTimer) {
         this.vertx = vertx;
+        this.config = config;
         this.tpsTimer = tpsTimer;
-        this.serverOptions = serverOptions;
-        this.blockingNanos = blockingNanos;
-        this.executeBlocking = executeBlocking;
     }
 
     public void stop() {
@@ -56,7 +51,7 @@ public class Server {
     }
 
     private void deployLocalVerticle(final AtomicInteger counter, final int verticles) {
-        vertx.deployVerticle(new LocalVerticle(tpsTimer, serverOptions, blockingNanos, executeBlocking), handler -> {
+        vertx.deployVerticle(new LocalVerticle(config, tpsTimer), handler -> {
             if (counter.incrementAndGet() < verticles) {
                 this.deployLocalVerticle(counter, verticles);
             }
@@ -65,25 +60,22 @@ public class Server {
 
     private class LocalVerticle extends AbstractVerticle {
 
+        private final ServerConfiguration config;
         private final TpsTimer tpsTimer;
-        private final HttpServerOptions serverOptions;
-        private final long blockingNanos;
-        private final boolean executeBlocking;
         private HttpServer httpServer;
 
-        public LocalVerticle(TpsTimer tpsTimer,
-                HttpServerOptions serverOptions,
-                long blockingNanos,
-                boolean executeBlocking) {
-
+        public LocalVerticle(ServerConfiguration config, TpsTimer tpsTimer) {
+            this.config = config;
             this.tpsTimer = tpsTimer;
-            this.serverOptions = serverOptions;
-            this.blockingNanos = blockingNanos;
-            this.executeBlocking = executeBlocking;
         }
 
         @Override
         public void start() throws Exception {
+            
+            HttpServerOptions serverOptions = new HttpServerOptions();
+            serverOptions.getInitialSettings().setMaxConcurrentStreams(config.getMultiplexingLimit());
+            serverOptions.setHost(config.getHost());
+            serverOptions.setPort(config.getPort());
 
             WorkerExecutor worker = this.vertx.createSharedWorkerExecutor(
                     "worker", 20, 100, TimeUnit.MILLISECONDS);
@@ -99,7 +91,7 @@ public class Server {
                         
                         long receiveTime = System.nanoTime();
                         
-                        if (this.executeBlocking) {
+                        if (config.isExecuteBlocking()) {
                             // offload service logic processing to worker thread
                             // call me if you are going to do something crazy.
                             Future<HttpServerResponse> future = worker.executeBlocking(handler -> {
@@ -138,7 +130,7 @@ public class Server {
         }
 
         private void executeServiceLogic() {
-            long endWorkTime = System.nanoTime() + this.blockingNanos;
+            long endWorkTime = System.nanoTime() + config.getBlockingNanos();
             while (System.nanoTime() < endWorkTime) {
                 // simulate time to execute service logic
             }
