@@ -65,6 +65,12 @@
             <type>jar</type>
         </dependency>
         <dependency>
+            <groupId>io.vertx</groupId>
+            <artifactId>vertx-json-schema</artifactId>
+            <version>4.4.4</version>
+            <type>jar</type>
+        </dependency>
+        <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
             <version>4.1.94.Final</version>

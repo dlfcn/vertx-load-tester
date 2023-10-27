@@ -29,4 +29,6 @@ Client arguments...
 7. Port of HTTP server being load tested 
 8. Path of the HTTP service being load tested
 
-//todo - update server arguments so that you can pass in the response the server should send.
+//todo - dynamically set this (path of configuration files to tests).
+//todo - update main to expect two arguments, client/server and path to configuration file.
+//todo - after updating expected main arguments, update this README file with json schemaa definition.

@@ -1,0 +1,22 @@
+{
+    "client": {
+        "numberOfConnections": 10,
+        "tpsPerConnection": 1000,
+        "multiplexingLimit": 10000,
+        "httpMethod": "POST",
+        "host": "localhost",
+        "port": 8080,
+        "path": "/nausf-auth/v1/ue-authentications/",
+        "headers": [
+            {
+                "name": "test-header",
+                "value": "test-value"
+            },
+            {
+                "name": "content-type",
+                "value": "application/json"
+            }
+        ],
+        "body": "{}"
+    }
+}

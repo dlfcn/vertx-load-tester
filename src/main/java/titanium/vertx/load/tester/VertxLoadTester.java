@@ -91,6 +91,8 @@ public class VertxLoadTester extends Thread {
                     blockingNanos,
                     executeBlocking);
         }
+        
+        INSTANCE.start();
     }
 
     private final TpsTimer tpsTimer; // used by all clients and server verticles
