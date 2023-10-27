@@ -104,7 +104,7 @@ public class Metrics {
                 averageTps = (totalTps / 60);
                 averageLatency = (totalLatency / 60);
 
-                System.out.printf("%s TPS = [%s], Latency = [%s nanos], Total Transactions = [%s]\n",
+                System.out.printf("%s TPS = [%s], Latency Nanos = [%s], Total Transactions = [%s]\n",
                         client ? "Client" : "Server", averageTps, averageLatency, totalTransactions.get());
             });
         }
