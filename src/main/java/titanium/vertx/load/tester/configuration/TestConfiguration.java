@@ -23,16 +23,34 @@ import java.util.Scanner;
 
 /**
  * Loads the configuration from file and creates a client or server
- * configuration instance based on type of test.
+ * configuration instance.
  */
 public class TestConfiguration {
 
-    private final JsonObject config;
-    private final ClientConfiguration clientConfig;
-    private final ServerConfiguration serverConfig;
+    public static ClientConfiguration getClientConfiguration(String pathName) {
 
-    public TestConfiguration(boolean client, String pathName) {
+        JsonObject config = getConfiguration(pathName);
+        
+        if (config.containsKey("client")) {
+            return new ClientConfiguration(config.getJsonObject("client"));
+        } else {
+            throw new IllegalArgumentException("Configuration does not contain client json object.");
+        }
+    }
+    
+    public static ServerConfiguration getServerConfiguration(String pathName) {
 
+        JsonObject config = getConfiguration(pathName);
+
+        if (config.containsKey("server")) {
+            return new ServerConfiguration(config.getJsonObject("server"));
+        } else {
+            throw new IllegalArgumentException("Configuration does not contain server json object.");
+        }
+    }
+    
+    private static JsonObject getConfiguration(String pathName) {
+        
         File file = new File(pathName);
 
         // verify file exists, that is a file, and it can be read
@@ -61,46 +79,18 @@ public class TestConfiguration {
         }
 
         // create json object using configuration fle that was scanned
-        this.config = new JsonObject(builder.toString());
+        JsonObject config = new JsonObject(builder.toString());
 
         // validate configuration json object against schema definition
-        OutputUnit outputUnit = JSON_VALIDATOR.validate(this.config);
+        OutputUnit outputUnit = validate(config);
 
         try {
             outputUnit.checkValidity();
         } catch (JsonSchemaValidationException ex) {
             throw new IllegalArgumentException(ex);
         }
-
-        if (client) {
-            // check for client configuration definition then create instance
-            if (config.containsKey("client")) {
-                this.clientConfig = new ClientConfiguration(config.getJsonObject("client"));
-                this.serverConfig = null;
-            } else {
-                throw new IllegalArgumentException("Configuration does not contain client json object.");
-            }
-        } else {
-            // check for server configuration definition then create instance
-            if (config.containsKey("server")) {
-                this.serverConfig = new ServerConfiguration(config.getJsonObject("server"));
-                this.clientConfig = null;
-            } else {
-                throw new IllegalArgumentException("Configuration does not contain server json object.");
-            }
-        }
-    }
-
-    public JsonObject getConfig() {
+        
         return config;
-    }
-
-    public ClientConfiguration getClientConfig() {
-        return clientConfig;
-    }
-
-    public ServerConfiguration getServerConfig() {
-        return serverConfig;
     }
 
     private static final String JSON_SCHEMA_STRING = ""

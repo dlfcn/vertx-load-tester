@@ -12,6 +12,7 @@ package titanium.vertx.load.tester.configuration;
 
 import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
+import io.vertx.json.schema.JsonSchemaValidationException;
 import io.vertx.json.schema.OutputUnit;
 import static org.testng.Assert.*;
 import org.testng.annotations.Test;
@@ -25,29 +26,34 @@ public class TestConfigurationNGTest {
         
         JsonObject json = new JsonObject();
         
+        // valid config test
         json.put("client", new JsonObject().put("port", 9090));
         OutputUnit result = TestConfiguration.validate(json);
         
         assertNotNull(result);
         assertTrue(result.getValid());
         
+        // invalid config test
         json.put("client", new JsonObject().put("port", "9090"));
         result = TestConfiguration.validate(json);
         
         assertNotNull(result);
         assertFalse(result.getValid());
+        
+        // invalid config test
+        boolean validConfig = true;
+        try {
+            result.checkValidity();
+        } catch (JsonSchemaValidationException ex) {
+            validConfig = false;
+        }
+        assertFalse(validConfig);
     }
 
     @Test
     public void validClientConfigTest() {
     
-        boolean client = true;
-        TestConfiguration testConfig = new TestConfiguration(client, baseDirectory + "client_config.json");
-        
-        assertNotNull(testConfig.getClientConfig());
-        assertNull(testConfig.getServerConfig());
-        
-        ClientConfiguration config = testConfig.getClientConfig();
+        ClientConfiguration config = TestConfiguration.getClientConfiguration(baseDirectory + "client_config.json");
         
         assertEquals(config.getNumberOfConnections(), 10);
         assertEquals(config.getTpsPerConnection(), 1_000);
@@ -71,13 +77,7 @@ public class TestConfigurationNGTest {
     @Test
     public void serverConfigTest() {
         
-        boolean client = false;
-        TestConfiguration testConfig = new TestConfiguration(client, baseDirectory + "server_config.json");
-        
-        assertNull(testConfig.getClientConfig());
-        assertNotNull(testConfig.getServerConfig());
-        
-        ServerConfiguration config = testConfig.getServerConfig();
+        ServerConfiguration config = TestConfiguration.getServerConfiguration(baseDirectory + "server_config.json");
         
         assertEquals(config.getHost(), "localhost");
         assertEquals(config.getPort(), 8080);
