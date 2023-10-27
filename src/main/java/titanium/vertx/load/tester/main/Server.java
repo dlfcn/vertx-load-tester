@@ -29,9 +29,9 @@ public class Server {
 
     private final Vertx vertx;
     private final ServerConfiguration config;
-    private final TpsTimer tpsTimer;
+    private final Metrics tpsTimer;
 
-    public Server(Vertx vertx, ServerConfiguration config, TpsTimer tpsTimer) {
+    public Server(Vertx vertx, ServerConfiguration config, Metrics tpsTimer) {
         this.vertx = vertx;
         this.config = config;
         this.tpsTimer = tpsTimer;
@@ -59,10 +59,10 @@ public class Server {
     private class LocalVerticle extends AbstractVerticle {
 
         private final ServerConfiguration config;
-        private final TpsTimer tpsTimer;
+        private final Metrics tpsTimer;
         private HttpServer httpServer;
 
-        public LocalVerticle(ServerConfiguration config, TpsTimer tpsTimer) {
+        public LocalVerticle(ServerConfiguration config, Metrics tpsTimer) {
             this.config = config;
             this.tpsTimer = tpsTimer;
         }

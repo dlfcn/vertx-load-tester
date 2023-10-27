@@ -55,7 +55,7 @@ public class VertxLoadTester extends Thread {
         INSTANCE.start();
     }
 
-    private final TpsTimer tpsTimer; // used by all clients and server verticles
+    private final Metrics tpsTimer; // used by all clients and server verticles
     private final List<Client> clientList = new ArrayList<>();
     private final Server server;
 
@@ -66,7 +66,7 @@ public class VertxLoadTester extends Thread {
      * @param config for the clients
      */
     public VertxLoadTester(Vertx vertx, ClientConfiguration config) {
-        this.tpsTimer = new TpsTimer(vertx, true);
+        this.tpsTimer = new Metrics(vertx, true);
         this.server = null;
 
         // create threads/clients for sending requests
@@ -82,7 +82,7 @@ public class VertxLoadTester extends Thread {
      * @param config for the server
      */
     public VertxLoadTester(Vertx vertx, ServerConfiguration config) {
-        this.tpsTimer = new TpsTimer(vertx, false);
+        this.tpsTimer = new Metrics(vertx, false);
         this.server = new Server(vertx, config, tpsTimer);
     }
 

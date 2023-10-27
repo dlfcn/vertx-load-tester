@@ -27,9 +27,9 @@ public class Client extends Thread {
     private boolean running = true;
     private final Vertx vertx;
     private final ClientConfiguration config;
-    private final TpsTimer tpsTimer;
+    private final Metrics tpsTimer;
 
-    public Client(Vertx vertx, ClientConfiguration config, TpsTimer tpsTimer) {
+    public Client(Vertx vertx, ClientConfiguration config, Metrics tpsTimer) {
         this.vertx = vertx;
         this.config = config;
         this.tpsTimer = tpsTimer;

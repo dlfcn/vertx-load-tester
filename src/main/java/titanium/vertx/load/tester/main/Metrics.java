@@ -1,5 +1,5 @@
 /*
- * TpsTimer.java
+ * Metrics.java
  *
  * Copyright (c) 2023 Titanium Software Holdings Inc. All Rights Reserved.
  *
@@ -17,7 +17,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * Tracks average TPS over the past 60 seconds.
  */
-public class TpsTimer {
+public class Metrics {
     
     private final Vertx vertx;
     private long timerId = -1;
@@ -29,7 +29,7 @@ public class TpsTimer {
     private long averageLatency = 0; // for the last 60 seconds
     private final AtomicLong totalTransactions = new AtomicLong(0);
     
-    public TpsTimer(Vertx vertx, boolean client) {
+    public Metrics(Vertx vertx, boolean client) {
         
         this.vertx = vertx;
         this.client = client;
