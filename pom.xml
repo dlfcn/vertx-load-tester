@@ -44,29 +44,29 @@
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-core</artifactId>
-            <version>4.4.4</version>
+            <version>4.4.6</version>
         </dependency>
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-web</artifactId>
-            <version>4.4.4</version>
+            <version>4.4.6</version>
         </dependency>
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-web-client</artifactId>
-            <version>4.4.4</version>
+            <version>4.4.6</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>io.vertx</groupId>
             <artifactId>vertx-json-schema</artifactId>
-            <version>4.4.4</version>
+            <version>4.4.6</version>
             <type>jar</type>
         </dependency>
         <dependency>
             <groupId>io.netty</groupId>
             <artifactId>netty-all</artifactId>
-            <version>4.1.94.Final</version>
+            <version>4.1.100.Final</version>
         </dependency>
         <dependency>
             <groupId>org.testng</groupId>

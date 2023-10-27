@@ -52,7 +52,7 @@ public class VertxLoadTester extends Thread {
         INSTANCE.start();
     }
 
-    private final Metrics tpsTimer; // used by all clients and server verticles
+    private final Metrics metrics; // used by all clients and server verticles
     private final List<Client> clientList = new ArrayList<>();
     private final Server server;
 
@@ -63,12 +63,12 @@ public class VertxLoadTester extends Thread {
      * @param config for the clients
      */
     public VertxLoadTester(Vertx vertx, ClientConfiguration config) {
-        this.tpsTimer = new Metrics(vertx, true);
+        this.metrics = new Metrics(vertx, true);
         this.server = null;
 
         // create threads/clients for sending requests
         for (int i = 0; i < config.getNumberOfConnections(); i++) {
-            this.clientList.add(new Client(vertx, config, tpsTimer));
+            this.clientList.add(new Client(vertx, config, metrics));
         }
     }
 
@@ -79,12 +79,12 @@ public class VertxLoadTester extends Thread {
      * @param config for the server
      */
     public VertxLoadTester(Vertx vertx, ServerConfiguration config) {
-        this.tpsTimer = new Metrics(vertx, false);
-        this.server = new Server(vertx, config, tpsTimer);
+        this.metrics = new Metrics(vertx, false);
+        this.server = new Server(vertx, config, metrics);
     }
 
     public long getAverageTps() {
-        return this.tpsTimer.getAverageTps();
+        return this.metrics.getAverageTps();
     }
 
     @Override

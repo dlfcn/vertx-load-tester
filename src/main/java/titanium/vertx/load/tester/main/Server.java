@@ -31,12 +31,12 @@ public class Server {
 
     private final Vertx vertx;
     private final ServerConfiguration config;
-    private final Metrics tpsTimer;
+    private final Metrics metrics;
 
-    public Server(Vertx vertx, ServerConfiguration config, Metrics tpsTimer) {
+    public Server(Vertx vertx, ServerConfiguration config, Metrics metrics) {
         this.vertx = vertx;
         this.config = config;
-        this.tpsTimer = tpsTimer;
+        this.metrics = metrics;
     }
 
     public void stop() {
@@ -45,12 +45,12 @@ public class Server {
 
     public void start() {
         System.out.printf("Deploying [%s] verticles.\n", config.getVerticles());
-        this.tpsTimer.start();
+        this.metrics.start();
         this.deployLocalVerticle(new AtomicInteger(0));
     }
 
     private void deployLocalVerticle(final AtomicInteger counter) {
-        vertx.deployVerticle(new LocalVerticle(config, tpsTimer), handler -> {
+        vertx.deployVerticle(new LocalVerticle(config, metrics), handler -> {
             if (counter.incrementAndGet() < config.getVerticles()) {
                 this.deployLocalVerticle(counter);
             }
@@ -60,12 +60,12 @@ public class Server {
     private class LocalVerticle extends AbstractVerticle {
 
         private final ServerConfiguration config;
-        private final Metrics tpsTimer;
+        private final Metrics metrics;
         private HttpServer httpServer;
 
-        public LocalVerticle(ServerConfiguration config, Metrics tpsTimer) {
+        public LocalVerticle(ServerConfiguration config, Metrics metrics) {
             this.config = config;
-            this.tpsTimer = tpsTimer;
+            this.metrics = metrics;
         }
 
         @Override
@@ -100,14 +100,14 @@ public class Server {
 
                             future.onComplete(handler -> {
                                 this.sendResponse(handler.result());
-                                tpsTimer.log(System.nanoTime() - receiveTime);
+                                metrics.log(System.nanoTime() - receiveTime);
                             });
                         } else {
                             // execute service logic on event loop thread!!!!!!!
                             // DO NOT BLOCK VERTX EVENT LOOP!!!!!!!!!
                             this.executeServiceLogic();
                             this.sendResponse(requestHandler.response());
-                            tpsTimer.log(System.nanoTime() - receiveTime);
+                            metrics.log(System.nanoTime() - receiveTime);
                         }
                     })
                     .listen(h -> {

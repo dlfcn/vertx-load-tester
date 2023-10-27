@@ -6,8 +6,9 @@ Vertx Load Tester
 To run load tester...
 1. Build project
 2. Go to /vertx-load-tester/target
-3. Start server; $ java -jar vertx-load-tester-1.0.0-SNAPSHOT.jar server [/path/to/congig/file]
-4. Start client; $ java -jar vertx-load-tester-1.0.0-SNAPSHOT.jar client [/path/to/congig/file]
+3. Start server; $ java -jar vertx-load-tester-1.0.0-SNAPSHOT.jar server [/path/to/config/file]
+4. Start client; $ java -jar vertx-load-tester-1.0.0-SNAPSHOT.jar client [/path/to/config/file]
+5. Stop server/client; control + c
 
 Json schema for client and server configuration...
 {

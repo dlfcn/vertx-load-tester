@@ -27,18 +27,18 @@ public class Client extends Thread {
     private boolean running = true;
     private final Vertx vertx;
     private final ClientConfiguration config;
-    private final Metrics tpsTimer;
+    private final Metrics metrics;
 
-    public Client(Vertx vertx, ClientConfiguration config, Metrics tpsTimer) {
+    public Client(Vertx vertx, ClientConfiguration config, Metrics metrics) {
         this.vertx = vertx;
         this.config = config;
-        this.tpsTimer = tpsTimer;
+        this.metrics = metrics;
     }
 
     @Override
     public void run() {
         
-        tpsTimer.start();
+        metrics.start();
         
         // do NOT change max pool size! One connection per thread/client!
         WebClientOptions clientOptions = new WebClientOptions()
@@ -68,25 +68,20 @@ public class Client extends Thread {
         while (running) {
             try {
                 long startTime = System.currentTimeMillis();
-                int counter = 0;
 
-                while (true) {
+                for (int i = 0; i < config.getTpsPerConnection(); i++) {
                     final long requestTime = System.nanoTime();
                     
                     if (body == null) {
                         request.send(handler -> {
                             long responseTime = System.nanoTime();
-                            tpsTimer.log(responseTime - requestTime);
+                            metrics.log(responseTime - requestTime);
                         });
                     } else {
                         request.sendBuffer(body, handler -> {
                             long responseTime = System.nanoTime();
-                            tpsTimer.log(responseTime - requestTime);
+                            metrics.log(responseTime - requestTime);
                         });
-                    }
-                    
-                    if (++counter == config.getTpsPerConnection()) {
-                        break;
                     }
                 }
 
