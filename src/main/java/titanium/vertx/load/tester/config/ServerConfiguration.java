@@ -31,6 +31,7 @@ public class ServerConfiguration {
     private final boolean executeBlocking;
     
     public ServerConfiguration(JsonObject config) {
+        
         this.host = config.getString("host", "localhost");
         this.port = config.getInteger("port", 8080);
         this.statusCode = config.getInteger("statusCode", 200);
@@ -50,7 +51,10 @@ public class ServerConfiguration {
         }
     }
 
-    public ServerConfiguration(String host, int port, int statusCode, MultiMap headers, String body, int verticles, int multiplexingLimit, int blockingNanos, boolean executeBlocking) {
+    public ServerConfiguration(String host, int port, int statusCode, 
+            MultiMap headers, String body, int verticles, int multiplexingLimit, 
+            int blockingNanos, boolean executeBlocking) {
+        
         this.host = host;
         this.port = port;
         this.statusCode = statusCode;

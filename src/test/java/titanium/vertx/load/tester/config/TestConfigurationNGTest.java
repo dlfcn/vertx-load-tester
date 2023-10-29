@@ -64,6 +64,7 @@ public class TestConfigurationNGTest {
         assertEquals(config.getPath(), "/nausf-auth/v1/ue-authentications/");
         assertEquals(config.getHeaders().size(), 2);
         assertEquals(config.getBody(), "{}");
+        assertEquals(config.getExpectedStatusCode(), 201);
 
         // assert header one
         assertTrue(config.getHeaders().contains("test-header"));

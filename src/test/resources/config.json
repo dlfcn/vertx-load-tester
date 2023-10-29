@@ -17,7 +17,8 @@
                 "value": "application/json"
             }
         ],
-        "body": "{}"
+        "body": "{}",
+        "expectedStatusCode": 201
     },
     "server": {
         "host": "localhost",

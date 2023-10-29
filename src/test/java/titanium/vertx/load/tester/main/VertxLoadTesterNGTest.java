@@ -104,7 +104,8 @@ public class VertxLoadTesterNGTest {
                 multiplexingLimit,
                 method, host, port, path,
                 MultiMap.caseInsensitiveMultiMap(),
-                null);
+                null,
+                200);
         
         CLIENT = new VertxLoadTester(Vertx.vertx(), clientConfig);
         CLIENT.start();

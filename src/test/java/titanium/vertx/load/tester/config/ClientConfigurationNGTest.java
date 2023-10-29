@@ -33,6 +33,7 @@ public class ClientConfigurationNGTest {
         assertEquals(config.getPath(), "/");
         assertEquals(config.getHeaders().size(), 0);
         assertNull(config.getBody());
+        assertEquals(config.getExpectedStatusCode(), 200);
     }
 
     @Test
@@ -47,6 +48,7 @@ public class ClientConfigurationNGTest {
         json.put("port", 9090);
         json.put("path", "/test/path");
         json.put("body", "{}");
+        json.put("expectedStatusCode", 201);
 
         // create header one
         JsonObject header1 = new JsonObject();
@@ -77,6 +79,7 @@ public class ClientConfigurationNGTest {
         assertEquals(config.getPath(), "/test/path");
         assertEquals(config.getHeaders().size(), 2);
         assertEquals(config.getBody(), "{}");
+        assertEquals(config.getExpectedStatusCode(), 201);
 
         // assert header one
         assertTrue(config.getHeaders().contains("test-header"));

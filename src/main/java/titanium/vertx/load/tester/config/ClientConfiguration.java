@@ -29,8 +29,10 @@ public class ClientConfiguration {
     private final String path;
     private final MultiMap headers;
     private final String body;
+    private final int expectedStatusCode;
     
     public ClientConfiguration(JsonObject config) {
+        
         this.numberOfConnections = config.getInteger("numberOfConnections", 1);
         this.tpsPerConnection = config.getInteger("tpsPerConnection", 100);
         this.multiplexingLimit = config.getInteger("multiplexingLimit", 1000);
@@ -40,6 +42,7 @@ public class ClientConfiguration {
         this.path = config.getString("path", "/");
         this.headers = MultiMap.caseInsensitiveMultiMap();
         this.body = config.getString("body", null);
+        this.expectedStatusCode = config.getInteger("expectedStatusCode", 200);
         
         if (config.containsKey("headers")) {
             JsonArray headerList = config.getJsonArray("headers");
@@ -50,7 +53,10 @@ public class ClientConfiguration {
         }
     }
 
-    public ClientConfiguration(int numberOfConnections, int tpsPerConnection, int multiplexingLimit, HttpMethod httpMethod, String host, int port, String path, MultiMap headers, String body) {
+    public ClientConfiguration(int numberOfConnections, int tpsPerConnection, 
+            int multiplexingLimit, HttpMethod httpMethod, String host, int port, 
+            String path, MultiMap headers, String body, int expectedStatusCode) {
+        
         this.numberOfConnections = numberOfConnections;
         this.tpsPerConnection = tpsPerConnection;
         this.multiplexingLimit = multiplexingLimit;
@@ -60,6 +66,7 @@ public class ClientConfiguration {
         this.path = path;
         this.headers = headers;
         this.body = body;
+        this.expectedStatusCode = expectedStatusCode;
     }
 
     public int getNumberOfConnections() {
@@ -96,6 +103,10 @@ public class ClientConfiguration {
 
     public String getBody() {
         return body;
+    }
+
+    public int getExpectedStatusCode() {
+        return expectedStatusCode;
     }
     
 }
