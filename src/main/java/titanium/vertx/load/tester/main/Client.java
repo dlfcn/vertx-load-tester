@@ -44,7 +44,7 @@ public class Client extends Thread {
 
         metrics.start();
 
-        // do NOT change max pool size! One connection per thread/client!
+        // create web client options
         WebClientOptions clientOptions = new WebClientOptions()
                 .setProtocolVersion(HttpVersion.HTTP_2)
                 .setHttp2ClearTextUpgrade(false)
