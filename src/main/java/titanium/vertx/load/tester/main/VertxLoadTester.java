@@ -11,8 +11,6 @@
 package titanium.vertx.load.tester.main;
 
 import io.vertx.core.Vertx;
-import java.util.ArrayList;
-import java.util.List;
 import titanium.vertx.load.tester.config.ClientConfiguration;
 import titanium.vertx.load.tester.config.ServerConfiguration;
 import titanium.vertx.load.tester.config.TestConfiguration;
@@ -53,7 +51,7 @@ public class VertxLoadTester extends Thread {
     }
 
     private final Metrics metrics; // used by all clients and server verticles
-    private final List<Client> clientList = new ArrayList<>();
+    private final Client client;
     private final Server server;
 
     /**
@@ -64,12 +62,8 @@ public class VertxLoadTester extends Thread {
      */
     public VertxLoadTester(Vertx vertx, ClientConfiguration config) {
         this.metrics = new Metrics(vertx, true);
+        this.client = new Client(vertx, config, metrics);
         this.server = null;
-
-        // create threads/clients for sending requests
-        for (int i = 0; i < config.getNumberOfConnections(); i++) {
-            this.clientList.add(new Client(vertx, config, metrics));
-        }
     }
 
     /**
@@ -80,11 +74,12 @@ public class VertxLoadTester extends Thread {
      */
     public VertxLoadTester(Vertx vertx, ServerConfiguration config) {
         this.metrics = new Metrics(vertx, false);
+        this.client = null;
         this.server = new Server(vertx, config, metrics);
     }
 
-    public long getAverageTps() {
-        return this.metrics.getAverageTps();
+    public Metrics getMetrics() {
+        return metrics;
     }
 
     @Override
@@ -95,8 +90,8 @@ public class VertxLoadTester extends Thread {
             server.start();
         }
 
-        // start clients
-        for (Client client : clientList) {
+        // start client
+        if (client != null) {
             client.start();
         }
     }
@@ -104,9 +99,9 @@ public class VertxLoadTester extends Thread {
     @Override
     public void interrupt() {
 
-        // stop clients
-        for (Client clients : clientList) {
-            clients.interrupt();
+        // stop client
+        if (client != null) {
+            client.interrupt();
         }
 
         // stop server

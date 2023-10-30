@@ -13,6 +13,7 @@ package titanium.vertx.load.tester.main;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.VertxOptions;
 import io.vertx.core.WorkerExecutor;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
@@ -44,14 +45,14 @@ public class Server {
     }
 
     public void start() {
-        System.out.printf("Deploying [%s] verticles.\n", config.getVerticles());
+        System.out.printf("Deploying [%s] verticles.\n", VertxOptions.DEFAULT_EVENT_LOOP_POOL_SIZE);
         this.metrics.start();
         this.deployLocalVerticle(new AtomicInteger(0));
     }
 
     private void deployLocalVerticle(final AtomicInteger counter) {
         vertx.deployVerticle(new LocalVerticle(config, metrics), handler -> {
-            if (counter.incrementAndGet() < config.getVerticles()) {
+            if (counter.incrementAndGet() < VertxOptions.DEFAULT_EVENT_LOOP_POOL_SIZE) {
                 this.deployLocalVerticle(counter);
             }
         });
@@ -129,8 +130,8 @@ public class Server {
         }
 
         private void executeServiceLogic() {
-            long endWorkTime = System.nanoTime() + config.getBlockingNanos();
-            while (System.nanoTime() < endWorkTime) {
+            long endWorkTime = System.currentTimeMillis() + config.getBlockingMillis();
+            while (System.currentTimeMillis() < endWorkTime) {
                 // simulate time to execute service logic
             }
         }

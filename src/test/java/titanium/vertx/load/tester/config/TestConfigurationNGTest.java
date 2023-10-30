@@ -56,8 +56,7 @@ public class TestConfigurationNGTest {
         ClientConfiguration config = TestConfiguration.getClientConfiguration(baseDirectory + "config.json");
         
         assertEquals(config.getNumberOfConnections(), 10);
-        assertEquals(config.getTpsPerConnection(), 1_000);
-        assertEquals(config.getMultiplexingLimit(), 10_000);
+        assertEquals(config.getMultiplexingLimit(), 3_000);
         assertEquals(config.getHttpMethod(), HttpMethod.POST);
         assertEquals(config.getHost(), "localhost");
         assertEquals(config.getPort(), 8080);
@@ -85,8 +84,8 @@ public class TestConfigurationNGTest {
         assertEquals(config.getStatusCode(), 201);
         assertEquals(config.getHeaders().size(), 2);
         assertEquals(config.getBody(), "{}");
-        assertEquals(config.getMultiplexingLimit(), 10_000);
-        assertEquals(config.getBlockingNanos(), 0);
+        assertEquals(config.getMultiplexingLimit(), 3_000);
+        assertEquals(config.getBlockingMillis(), 0);
         assertFalse(config.isExecuteBlocking());
 
         // assert header one

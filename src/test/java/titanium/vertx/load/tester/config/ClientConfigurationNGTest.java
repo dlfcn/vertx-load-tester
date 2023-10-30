@@ -25,7 +25,6 @@ public class ClientConfigurationNGTest {
         ClientConfiguration config = new ClientConfiguration(json);
 
         assertEquals(config.getNumberOfConnections(), 1);
-        assertEquals(config.getTpsPerConnection(), 100);
         assertEquals(config.getMultiplexingLimit(), 1_000);
         assertEquals(config.getHttpMethod(), HttpMethod.GET);
         assertEquals(config.getHost(), "localhost");
@@ -71,7 +70,6 @@ public class ClientConfigurationNGTest {
         ClientConfiguration config = new ClientConfiguration(json);
 
         assertEquals(config.getNumberOfConnections(), 2);
-        assertEquals(config.getTpsPerConnection(), 200);
         assertEquals(config.getMultiplexingLimit(), 2_000);
         assertEquals(config.getHttpMethod(), HttpMethod.POST);
         assertEquals(config.getHost(), "1.1.1.1");

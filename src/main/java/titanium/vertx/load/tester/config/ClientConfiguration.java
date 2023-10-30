@@ -21,7 +21,6 @@ import io.vertx.core.json.JsonObject;
 public class ClientConfiguration {
     
     private final int numberOfConnections;
-    private final int tpsPerConnection;
     private final int multiplexingLimit;
     private final HttpMethod httpMethod;
     private final String host;
@@ -34,7 +33,6 @@ public class ClientConfiguration {
     public ClientConfiguration(JsonObject config) {
         
         this.numberOfConnections = config.getInteger("numberOfConnections", 1);
-        this.tpsPerConnection = config.getInteger("tpsPerConnection", 100);
         this.multiplexingLimit = config.getInteger("multiplexingLimit", 1000);
         this.httpMethod = HttpMethod.valueOf(config.getString("httpMethod", "GET"));
         this.host = config.getString("host", "localhost");
@@ -53,12 +51,11 @@ public class ClientConfiguration {
         }
     }
 
-    public ClientConfiguration(int numberOfConnections, int tpsPerConnection, 
-            int multiplexingLimit, HttpMethod httpMethod, String host, int port, 
-            String path, MultiMap headers, String body, int expectedStatusCode) {
+    public ClientConfiguration(int numberOfConnections, int multiplexingLimit, 
+            HttpMethod httpMethod, String host, int port, String path, 
+            MultiMap headers, String body, int expectedStatusCode) {
         
         this.numberOfConnections = numberOfConnections;
-        this.tpsPerConnection = tpsPerConnection;
         this.multiplexingLimit = multiplexingLimit;
         this.httpMethod = httpMethod;
         this.host = host;
@@ -71,10 +68,6 @@ public class ClientConfiguration {
 
     public int getNumberOfConnections() {
         return numberOfConnections;
-    }
-
-    public int getTpsPerConnection() {
-        return tpsPerConnection;
     }
 
     public int getMultiplexingLimit() {

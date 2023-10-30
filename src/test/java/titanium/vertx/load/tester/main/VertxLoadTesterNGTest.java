@@ -56,32 +56,46 @@ public class VertxLoadTesterNGTest {
         And tests might fail if you don't have enough CPU!
          */
         return new Object[][]{
-            // Easy Test - Average TPS = 2k
-            // 2k TPS = 2 Connections * 1k tps (per connection)
-            // each transaction takes 1/10th of a millis
+            /*
+            Expected TPS = 30k+
+            Server immediately responds 200.
+             */
             {
-                false, 2, 1_000, 1_000, 100_000, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
+                false, 10, 3_000, 0, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
             },
-            // Stress Test - Average TPS = 30k
-            // 30k TPS = 10 connections * 1k tps (per connection)
-            // each transaction takes 1/10th of a milli
+            /*
+            Expected TPS = 5k
+            Server takes 2ms to process each request. Max TPS is equal to the 
+            time each transaction takes to process using an event-loop-thread, 
+            multiplied by the number of connections.
+            
+            Expected TPS = (1 sec / processing millis) * Number Of Connections
+            500 tps = 1_000 millis / 2 millis;
+            5k tps = 500 tps * 10 connections;
+             */
             {
-                false, 10, 3_000, 1_000, 100_000, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
+                false, 10, 3_000, 2, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
             }
         };
     }
 
     @Test(dataProvider = "loadProvider", timeOut = 120000)
-    public void test(boolean executeBlocking,
-            int numberOfConnections, 
-            int tpsPerConnection, 
-            int multiplexingLimit, 
-            int blockingNanos,
+    public void test(boolean executeBlocking, int numberOfConnections, 
+            int multiplexingLimit, long blockingMillis, 
             HttpMethod method, String host, int port, String path)
             throws InterruptedException, Exception {
 
         tearDownClass();
         Thread.sleep(1_000); // wait a sec for threads and verticles to stop
+        
+        // calculate expected transactions per second
+        long expectedTps;
+        if (blockingMillis > 0) {
+            expectedTps = (1_000 / blockingMillis) * numberOfConnections;
+        } else {
+            expectedTps = numberOfConnections * multiplexingLimit;
+        }
+        System.out.printf("Expected TPS = [%s]\n", expectedTps);
 
         // create and start server
         ServerConfiguration serverConfig = new ServerConfiguration(host, 
@@ -91,7 +105,7 @@ public class VertxLoadTesterNGTest {
                 null,
                 numberOfConnections,
                 multiplexingLimit,
-                blockingNanos,
+                blockingMillis,
                 executeBlocking);
         
         SERVER = new VertxLoadTester(Vertx.vertx(), serverConfig);
@@ -100,7 +114,6 @@ public class VertxLoadTesterNGTest {
 
         // create and start client
         ClientConfiguration clientConfig = new ClientConfiguration(numberOfConnections,
-                tpsPerConnection,
                 multiplexingLimit,
                 method, host, port, path,
                 MultiMap.caseInsensitiveMultiMap(),
@@ -111,20 +124,21 @@ public class VertxLoadTesterNGTest {
         CLIENT.start();
         Thread.sleep(5_000); // wait a sec for tps buckets to fill
 
-        boolean desiredTpsReached = false;
-
-        while (!desiredTpsReached) {
-            if (SERVER.getAverageTps() >= (numberOfConnections * tpsPerConnection)) {
-                desiredTpsReached = true;
+        boolean expectedTpsReached = false;
+        
+        while (!expectedTpsReached) {
+            if (CLIENT.getMetrics().getMaxTps() >= expectedTps
+                    || SERVER.getMetrics().getMaxTps() >= expectedTps) {
+                expectedTpsReached = true;
             } else {
                 // will take time for tps buckets to fill
                 Thread.sleep(10_000);
             }
         }
 
-        assertTrue(desiredTpsReached, String.format(
-                "Desired TPS of [%s] was not reached within 120 seconds", 
-                (numberOfConnections * tpsPerConnection)));
+        assertTrue(expectedTpsReached, String.format(
+                "Expected TPS of [%s] was not reached within 120 seconds", 
+                (expectedTps)));
     }
 
 }

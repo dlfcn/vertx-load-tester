@@ -23,6 +23,7 @@ public class Metrics {
     private final Vertx vertx;
     private long timerId = -1;
     private final boolean client;
+    private long maxTps = 0;
     private final AtomicInteger bucketIndex = new AtomicInteger(0);
     private final AtomicInteger[] tpsBuckets = new AtomicInteger[61];
     private long averageTps = 0; // for the last 60 seconds
@@ -44,6 +45,10 @@ public class Metrics {
         for (int i = 0; i < latencyBuckets.length; i++) {
             latencyBuckets[i] = new AtomicLong(0);
         }
+    }
+
+    public long getMaxTps() {
+        return maxTps;
     }
 
     public long getAverageTps() {
@@ -103,6 +108,10 @@ public class Metrics {
 
                 averageTps = (totalTps / 60);
                 averageLatency = (totalLatency / 60);
+                
+                if (averageTps > maxTps) {
+                    maxTps = averageTps;
+                }
 
                 System.out.printf("%s TPS = [%s], Latency Nanos = [%s], Total Transactions = [%s]\n",
                         client ? "Client" : "Server", averageTps, averageLatency, totalTransactions.get());

@@ -18,6 +18,7 @@ import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
+import java.util.concurrent.atomic.AtomicLong;
 import titanium.vertx.load.tester.config.ClientConfiguration;
 
 /**
@@ -26,10 +27,11 @@ import titanium.vertx.load.tester.config.ClientConfiguration;
  */
 public class Client extends Thread {
 
-    private static boolean RUNNING;
+    private boolean running = true;
     private final Vertx vertx;
     private final ClientConfiguration config;
     private final Metrics metrics;
+    private final AtomicLong streams = new AtomicLong(0);
 
     public Client(Vertx vertx, ClientConfiguration config, Metrics metrics) {
         this.vertx = vertx;
@@ -40,14 +42,13 @@ public class Client extends Thread {
     @Override
     public void run() {
 
-        RUNNING = true;
         metrics.start();
 
         // do NOT change max pool size! One connection per thread/client!
         WebClientOptions clientOptions = new WebClientOptions()
                 .setProtocolVersion(HttpVersion.HTTP_2)
                 .setHttp2ClearTextUpgrade(false)
-                .setHttp2MaxPoolSize(1)
+                .setHttp2MaxPoolSize(config.getNumberOfConnections())
                 .setHttp2MultiplexingLimit(config.getMultiplexingLimit());
 
         // create client/connection
@@ -68,15 +69,9 @@ public class Client extends Thread {
             body = Buffer.buffer(config.getBody());
         }
 
-        while (RUNNING) {
-            long startTime = System.currentTimeMillis();
-            int counter = 0;
+        while (running) {
+            if (streams.get() <= (config.getNumberOfConnections() * config.getMultiplexingLimit())) {
 
-            while (RUNNING) {
-                if (counter++ == config.getTpsPerConnection()) {
-                    break; // desired number of transactions sent
-                }
-                
                 final long requestTime = System.nanoTime();
                 Future<HttpResponse<Buffer>> future;
 
@@ -86,8 +81,11 @@ public class Client extends Thread {
                     future = request.sendBuffer(body);
                 }
 
+                streams.incrementAndGet(); // stream opened
                 future.onComplete(handler -> {
-                    if (!RUNNING) {
+                    streams.decrementAndGet(); // stream closed
+
+                    if (!running) {
                         // something went wrong with one of the clients
                         this.interrupt();
                     } else if (handler.failed()) {
@@ -105,32 +103,17 @@ public class Client extends Thread {
                     }
                 });
             }
-
-            long sleepMillis = (startTime + 1_000) - System.currentTimeMillis();
-            
-            if (sleepMillis < 0) {
-                this.interrupt();
-                throw new RuntimeException(String.format(
-                        "Could not send desired transactions per second [%s].", 
-                        config.getTpsPerConnection()));
-            } else {
-                try {
-                    Thread.sleep(sleepMillis);
-                } catch (InterruptedException ex) {
-                    // do nothing
-                }
-            }
         }
     }
 
     @Override
     public void interrupt() {
-        RUNNING = false;
+        running = false;
         vertx.setTimer(1_000, handler -> {
             // wait a sec for all transactions to complete then close vertx 
             // else a bunch of broken pipe exceptions could be thrown
             vertx.close();
         });
     }
-    
+
 }

@@ -1,8 +1,7 @@
 {
     "client": {
         "numberOfConnections": 10,
-        "tpsPerConnection": 1000,
-        "multiplexingLimit": 10000,
+        "multiplexingLimit": 3000,
         "httpMethod": "POST",
         "host": "localhost",
         "port": 8080,
@@ -35,9 +34,8 @@
             }
         ],
         "body": "{}",
-        "verticles": 10,
-        "multiplexingLimit": 10000,
-        "blockingNanos": 0,
+        "multiplexingLimit": 3000,
+        "blockingMillis": 0,
         "executeBlocking": false
     }
 }
