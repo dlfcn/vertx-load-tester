@@ -18,6 +18,8 @@ import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import titanium.vertx.load.tester.config.ClientConfiguration;
 
@@ -48,37 +50,53 @@ public class Client extends Thread {
         WebClientOptions clientOptions = new WebClientOptions()
                 .setProtocolVersion(HttpVersion.HTTP_2)
                 .setHttp2ClearTextUpgrade(false)
-                .setHttp2MaxPoolSize(config.getNumberOfConnections())
+                .setHttp2MaxPoolSize(1) // do NOT change!!
                 .setHttp2MultiplexingLimit(config.getMultiplexingLimit());
+        
+        // each request in list created using a different web client
+        // each request will be sent round-robin on its own connection
+        List<HttpRequest<Buffer>> requestList = new ArrayList<>();
+        
+        for (int i = 0; i < config.getNumberOfConnections(); i++) {
+            
+            // create client/connection
+            WebClient client = WebClient.create(vertx, clientOptions);
 
-        // create client/connection
-        WebClient client = WebClient.create(vertx, clientOptions);
+            // create request
+            HttpRequest<Buffer> request = client.request(config.getHttpMethod(),
+                    config.getPort(),
+                    config.getHost(),
+                    config.getPath());
 
-        // create request
-        HttpRequest<Buffer> request = client.request(config.getHttpMethod(),
-                config.getPort(),
-                config.getHost(),
-                config.getPath());
-
-        // add headers to request
-        request.headers().addAll(config.getHeaders());
+            // add headers to request
+            request.headers().addAll(config.getHeaders());
+            
+            // add request to list
+            requestList.add(request);
+        }
 
         // create body buffer
         Buffer body = null;
         if (config.getBody() != null) {
             body = Buffer.buffer(config.getBody());
         }
+        
+        int index = 0;
 
         while (running) {
             if (streams.get() <= (config.getNumberOfConnections() * config.getMultiplexingLimit())) {
+                
+                if (++index == (requestList.size())) {
+                    index = 0;
+                }
 
                 final long requestTime = System.nanoTime();
                 Future<HttpResponse<Buffer>> future;
 
                 if (body == null) {
-                    future = request.send();
+                    future = requestList.get(index).send();
                 } else {
-                    future = request.sendBuffer(body);
+                    future = requestList.get(index).sendBuffer(body);
                 }
 
                 streams.incrementAndGet(); // stream opened
