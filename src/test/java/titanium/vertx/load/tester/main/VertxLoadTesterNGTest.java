@@ -59,22 +59,37 @@ public class VertxLoadTesterNGTest {
             /*
             Expected TPS = 30k+
             Server immediately responds 200.
+            
+            Monitoring the server for the number of requests from a single
+            remote port shows that one connection can be favored if the 
+            multiplexing limit is set too high. This is partly due to the server 
+            taking zero time to process the request and send a response to 
+            close the transaction and free up the stream on the connection. 
+            Adding latency will ensure the client sends an even number of 
+            requests over all available connections, thus utilizing more of a 
+            servers available "verticles" (which are just "event-loop-threads").
              */
             {
                 false, 10, 3_000, 0, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
             },
             /*
-            Expected TPS = 5k
+            Expected TPS = ~5k
             Server takes 2ms to process each request. Max TPS is equal to the 
             time each transaction takes to process using an event-loop-thread, 
             multiplied by the number of connections.
             
-            Expected TPS = (1 sec / processing millis) * Number Of Connections
+            Expected TPS = (1 sec / processing millis) * Number Of Connections;
             500 tps = 1_000 millis / 2 millis;
             5k tps = 500 tps * 10 connections;
              */
             {
                 false, 10, 3_000, 2, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
+            },
+            // Expected TPS = ~10k
+            // Good connection scaling example
+            // 1k tps per connection = 1 second / 1 ms (per request)
+            {
+                false, 10, 1_000, 1, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
             }
         };
     }

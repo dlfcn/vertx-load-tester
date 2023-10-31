@@ -90,6 +90,8 @@ public class Server {
                     .requestHandler(requestHandler -> {
                         
                         long receiveTime = System.nanoTime();
+                        int remotePort = requestHandler.connection().remoteAddress().port();
+                        metrics.logRemotePortTransaction(remotePort);
                         
                         if (config.isExecuteBlocking()) {
                             // offload service logic processing to worker thread

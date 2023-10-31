@@ -11,6 +11,8 @@
 package titanium.vertx.load.tester.main;
 
 import io.vertx.core.Vertx;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -21,15 +23,21 @@ import java.util.concurrent.atomic.AtomicLong;
 public class Metrics {
     
     private final Vertx vertx;
-    private long timerId = -1;
+    private long timerId1Second = -1;
+    private long timerId15Seconds = -1;
     private final boolean client;
     private long maxTps = 0;
     private final AtomicInteger bucketIndex = new AtomicInteger(0);
+    
+    // client and server metrics
     private final AtomicInteger[] tpsBuckets = new AtomicInteger[61];
     private long averageTps = 0; // for the last 60 seconds
     private final AtomicLong[] latencyBuckets = new AtomicLong[61];
     private long averageLatency = 0; // for the last 60 seconds
     private final AtomicLong totalTransactions = new AtomicLong(0);
+    
+    // server only metrics
+    private final ConcurrentHashMap<Integer, AtomicLong> remotePortMap = new ConcurrentHashMap<>(); // total per remote port
     
     public Metrics(Vertx vertx, boolean client) {
         
@@ -70,13 +78,21 @@ public class Metrics {
         totalTransactions.incrementAndGet();
     }
     
+    public void logRemotePortTransaction(int remotePort) {
+        
+        // log transaction for remote client port
+        if (remotePortMap.containsKey(remotePort)) {
+            remotePortMap.get(remotePort).incrementAndGet();
+        } else {
+            remotePortMap.put(remotePort, new AtomicLong(1));
+        }
+    }
+    
     public synchronized void start() {
 
-        // check if a client has already started timer
-        if (this.timerId == -1) {
-
-            // start timer task for client response tps
-            this.timerId = this.vertx.setPeriodic(1_000, handler -> {
+        // server and client stats (so far)
+        if (this.timerId1Second == -1) {
+            this.timerId1Second = this.vertx.setPeriodic(1_000, handler -> {
 
                 int index = 0;
 
@@ -116,6 +132,21 @@ public class Metrics {
                 System.out.printf("%s TPS = [%s], Latency Nanos = [%s], Total Transactions = [%s]\n",
                         client ? "Client" : "Server", averageTps, averageLatency, totalTransactions.get());
             });
+        }
+
+        // server only stats (so far)
+        if (!client) {
+            if (this.timerId15Seconds == -1) {
+                this.timerId15Seconds = this.vertx.setPeriodic(15_000, handler -> {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("\n");
+                    for (Map.Entry<Integer, AtomicLong> entry : remotePortMap.entrySet()) {
+                        sb.append(String.format("Remote Port [%s] = [%s]\n",
+                                entry.getKey(), entry.getValue().get()));
+                    }
+                    System.out.println(sb.toString());
+                });
+            }
         }
     }
     
