@@ -55,6 +55,7 @@ public class TestConfigurationNGTest {
     
         ClientConfiguration config = TestConfiguration.getClientConfiguration(baseDirectory + "config.json");
         
+        assertEquals(config.getNumberOfClients(), 1);
         assertEquals(config.getNumberOfConnections(), 10);
         assertEquals(config.getMultiplexingLimit(), 3_000);
         assertEquals(config.getHttpMethod(), HttpMethod.POST);

@@ -20,6 +20,7 @@ import io.vertx.core.json.JsonObject;
  */
 public class ClientConfiguration {
     
+    private final int numberOfClients;
     private final int numberOfConnections;
     private final int multiplexingLimit;
     private final HttpMethod httpMethod;
@@ -32,6 +33,7 @@ public class ClientConfiguration {
     
     public ClientConfiguration(JsonObject config) {
         
+        this.numberOfClients = config.getInteger("numberOfClients", 1);
         this.numberOfConnections = config.getInteger("numberOfConnections", 1);
         this.multiplexingLimit = config.getInteger("multiplexingLimit", 1000);
         this.httpMethod = HttpMethod.valueOf(config.getString("httpMethod", "GET"));
@@ -51,10 +53,11 @@ public class ClientConfiguration {
         }
     }
 
-    public ClientConfiguration(int numberOfConnections, int multiplexingLimit, 
+    public ClientConfiguration(int numberOfClients, int numberOfConnections, int multiplexingLimit, 
             HttpMethod httpMethod, String host, int port, String path, 
             MultiMap headers, String body, int expectedStatusCode) {
         
+        this.numberOfClients = numberOfClients;
         this.numberOfConnections = numberOfConnections;
         this.multiplexingLimit = multiplexingLimit;
         this.httpMethod = httpMethod;
@@ -64,6 +67,10 @@ public class ClientConfiguration {
         this.headers = headers;
         this.body = body;
         this.expectedStatusCode = expectedStatusCode;
+    }
+
+    public int getNumberOfClients() {
+        return numberOfClients;
     }
 
     public int getNumberOfConnections() {

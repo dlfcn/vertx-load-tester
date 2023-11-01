@@ -1,5 +1,6 @@
 {
     "client": {
+        "numberOfClients": 1,
         "numberOfConnections": 10,
         "multiplexingLimit": 3000,
         "httpMethod": "POST",

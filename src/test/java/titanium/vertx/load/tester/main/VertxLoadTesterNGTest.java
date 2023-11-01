@@ -74,7 +74,9 @@ public class VertxLoadTesterNGTest {
             servers available "verticles" (which are just "event-loop-threads").
              */
             {
-                false, 10, 100, 0, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
+                false, 0, 
+                2, 1, 100, 
+                HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
             },
             /*
             Expected TPS = ~5k
@@ -87,20 +89,26 @@ public class VertxLoadTesterNGTest {
             5k tps = 500 tps * 10 connections;
              */
             {
-                false, 10, 500, 2, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
+                false, 2, 
+                1, 10, 500, 
+                HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
             },
-            // Expected TPS = ~10k
-            // Good connection scaling example
-            // 1k tps per connection = 1 second / 1 ms (per request)
+            /*
+            Expected TPS = ~10k
+            Good connection scaling example
+            1k tps per connection = 1 second / 1 ms (per request)
+             */
             {
-                false, 10, 1_000, 1, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
+                false, 1, 
+                1, 10, 1_000, 
+                HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
             }
         };
     }
 
     @Test(dataProvider = "loadProvider", timeOut = 120000)
-    public void test(boolean executeBlocking, int numberOfConnections, 
-            int multiplexingLimit, long blockingMillis, 
+    public void test(boolean executeBlocking, long blockingMillis, 
+            int numberOfClients, int numberOfConnections, int multiplexingLimit,
             HttpMethod method, String host, int port, String path)
             throws InterruptedException, Exception {
 
@@ -113,6 +121,7 @@ public class VertxLoadTesterNGTest {
         } else {
             expectedTps = numberOfConnections * multiplexingLimit;
         }
+        expectedTps = numberOfClients * expectedTps;
         System.out.printf("Expected TPS = [%s]\n", expectedTps);
 
         // create and start server
@@ -131,7 +140,8 @@ public class VertxLoadTesterNGTest {
         Thread.sleep(1_000); // wait a sec for verticles to start
 
         // create and start client
-        ClientConfiguration clientConfig = new ClientConfiguration(numberOfConnections,
+        ClientConfiguration clientConfig = new ClientConfiguration(numberOfClients,
+                numberOfConnections,
                 multiplexingLimit,
                 method, host, port, path,
                 MultiMap.caseInsensitiveMultiMap(),

@@ -18,6 +18,7 @@ import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import titanium.vertx.load.tester.config.ClientConfiguration;
 
@@ -27,7 +28,7 @@ import titanium.vertx.load.tester.config.ClientConfiguration;
  */
 public class Client extends Thread {
 
-    private boolean running = true;
+    private static final AtomicBoolean RUNNING = new AtomicBoolean(true);
     private final Vertx vertx;
     private final ClientConfiguration config;
     private final Metrics metrics;
@@ -42,6 +43,7 @@ public class Client extends Thread {
     @Override
     public void run() {
 
+        RUNNING.set(true);
         metrics.start();
 
         // create web client options
@@ -69,7 +71,7 @@ public class Client extends Thread {
             body = Buffer.buffer(config.getBody());
         }
 
-        while (running) {
+        while (RUNNING.get()) {
             if (streams.get() <= (config.getNumberOfConnections() * config.getMultiplexingLimit())) {
                 try {
                     final long requestTime = System.nanoTime();
@@ -109,8 +111,7 @@ public class Client extends Thread {
 
     @Override
     public void interrupt() {
-        if (running) {
-            running = false;
+        if (RUNNING.getAndSet(false)) {
             vertx.setTimer(1_000, handler -> {
                 // wait a sec for all transactions to complete then close vertx 
                 // else a bunch of broken pipe exceptions could be thrown
