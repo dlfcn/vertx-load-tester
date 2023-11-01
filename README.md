@@ -20,13 +20,18 @@ Json schema for client and server configuration...
       "description" : "Client configuration.",
       "type" : "object",
       "properties" : {
+        "numberOfClients" : {
+          "description" : "Number of clients. How many clients/threads do you want to start sending requests?",
+          "type" : "integer",
+          "default" : 1
+        },
         "numberOfConnections" : {
-          "description" : "Desired number of TCP connections. How many clients/threads do you want to start for sending requests?",
+          "description" : "Number of connections. How many connections should each client/thread get?",
           "type" : "integer",
           "default" : 1
         },
         "multiplexingLimit" : {
-          "description" : "Multiplexing limit for each TCP connection. How many streams/transactions should one TCP connection support?",
+          "description" : "Multiplexing limit. How many streams/transactions should each connection support?",
           "type" : "integer",
           "default" : 1000
         },
@@ -121,7 +126,7 @@ Json schema for client and server configuration...
           "type" : "string"
         },
         "multiplexingLimit" : {
-          "description" : "Multiplexing limit for each TCP connection. How many streams/transactions should one TCP connection support?",
+          "description" : "Multiplexing limit. How many streams/transactions should each connection support?",
           "type" : "integer",
           "default" : 1000
         },
@@ -131,7 +136,7 @@ Json schema for client and server configuration...
           "default" : 0
         },
         "executeBlocking" : {
-          "description" : "Should be false unless you want to offload request processing to worker thread instead of event loop thread.",
+          "description" : "Should be false unless you want to offload request processing to worker-thread instead of event-loop-thread.",
           "type" : "boolean",
           "default" : false
         }
