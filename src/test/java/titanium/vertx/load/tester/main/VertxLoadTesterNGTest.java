@@ -42,11 +42,15 @@ public class VertxLoadTesterNGTest {
             CLIENT.interrupt();
             CLIENT = null;
         }
+        
+        Thread.sleep(2_000);
 
         if (SERVER != null) {
             SERVER.interrupt();
             SERVER = null;
         }
+        
+        Thread.sleep(2_000);
     }
 
     @DataProvider
@@ -70,7 +74,7 @@ public class VertxLoadTesterNGTest {
             servers available "verticles" (which are just "event-loop-threads").
              */
             {
-                false, 10, 3_000, 0, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
+                false, 10, 100, 0, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
             },
             /*
             Expected TPS = ~5k
@@ -83,7 +87,7 @@ public class VertxLoadTesterNGTest {
             5k tps = 500 tps * 10 connections;
              */
             {
-                false, 10, 3_000, 2, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
+                false, 10, 500, 2, HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
             },
             // Expected TPS = ~10k
             // Good connection scaling example
@@ -101,7 +105,6 @@ public class VertxLoadTesterNGTest {
             throws InterruptedException, Exception {
 
         tearDownClass();
-        Thread.sleep(1_000); // wait a sec for threads and verticles to stop
         
         // calculate expected transactions per second
         long expectedTps;

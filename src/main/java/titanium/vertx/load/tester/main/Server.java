@@ -72,15 +72,15 @@ public class Server {
         @Override
         public void start() throws Exception {
             
-            HttpServerOptions serverOptions = new HttpServerOptions();
-            serverOptions.getInitialSettings().setMaxConcurrentStreams(config.getMultiplexingLimit());
-            serverOptions.setHost(config.getHost());
-            serverOptions.setPort(config.getPort());
+            HttpServerOptions options = new HttpServerOptions();
+            options.getInitialSettings().setMaxConcurrentStreams(config.getMultiplexingLimit());
+            options.setHost(config.getHost());
+            options.setPort(config.getPort());
 
             WorkerExecutor worker = this.vertx.createSharedWorkerExecutor(
                     "worker", 20, 100, TimeUnit.MILLISECONDS);
 
-            this.vertx.createHttpServer(serverOptions)
+            this.vertx.createHttpServer(options)
                     .exceptionHandler(exceptionHandler -> {
                         exceptionHandler.printStackTrace();
                     })

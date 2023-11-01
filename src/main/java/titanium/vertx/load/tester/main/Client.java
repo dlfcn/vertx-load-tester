@@ -18,8 +18,6 @@ import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import titanium.vertx.load.tester.config.ClientConfiguration;
 
@@ -47,91 +45,78 @@ public class Client extends Thread {
         metrics.start();
 
         // create web client options
-        WebClientOptions clientOptions = new WebClientOptions()
+        WebClientOptions options = new WebClientOptions()
                 .setProtocolVersion(HttpVersion.HTTP_2)
                 .setHttp2ClearTextUpgrade(false)
-                .setHttp2MaxPoolSize(1) // do NOT change!!
+                .setHttp2MaxPoolSize(config.getNumberOfConnections())
                 .setHttp2MultiplexingLimit(config.getMultiplexingLimit());
         
-        // each request in list created using a different web client
-        // each request will be sent round-robin on its own connection
-        List<HttpRequest<Buffer>> requestList = new ArrayList<>();
-        
-        for (int i = 0; i < config.getNumberOfConnections(); i++) {
-            
-            // create client/connection
-            WebClient client = WebClient.create(vertx, clientOptions);
+        // create client
+        WebClient client = WebClient.create(vertx, options);
 
-            // create request
-            HttpRequest<Buffer> request = client.request(config.getHttpMethod(),
-                    config.getPort(),
-                    config.getHost(),
-                    config.getPath());
+        // create request
+        HttpRequest<Buffer> request = client.request(config.getHttpMethod(),
+                config.getPort(),
+                config.getHost(),
+                config.getPath());
 
-            // add headers to request
-            request.headers().addAll(config.getHeaders());
-            
-            // add request to list
-            requestList.add(request);
-        }
+        // add headers to request
+        request.headers().addAll(config.getHeaders());
 
         // create body buffer
         Buffer body = null;
         if (config.getBody() != null) {
             body = Buffer.buffer(config.getBody());
         }
-        
-        int index = 0;
 
         while (running) {
             if (streams.get() <= (config.getNumberOfConnections() * config.getMultiplexingLimit())) {
-                
-                if (++index == (requestList.size())) {
-                    index = 0;
-                }
+                try {
+                    final long requestTime = System.nanoTime();
+                    Future<HttpResponse<Buffer>> future;
 
-                final long requestTime = System.nanoTime();
-                Future<HttpResponse<Buffer>> future;
-
-                if (body == null) {
-                    future = requestList.get(index).send();
-                } else {
-                    future = requestList.get(index).sendBuffer(body);
-                }
-
-                streams.incrementAndGet(); // stream opened
-                future.onComplete(handler -> {
-                    streams.decrementAndGet(); // stream closed
-
-                    if (!running) {
-                        // something went wrong with one of the clients
-                        this.interrupt();
-                    } else if (handler.failed()) {
-                        this.interrupt();
-                        throw new RuntimeException(handler.cause());
-                    } else if (handler.result().statusCode() != config.getExpectedStatusCode()) {
-                        this.interrupt();
-                        throw new RuntimeException(String.format(
-                                "Expected status code [%s], received [%s].",
-                                config.getExpectedStatusCode(),
-                                handler.result().statusCode()));
+                    if (body == null) {
+                        future = request.send();
                     } else {
-                        long responseTime = System.nanoTime();
-                        metrics.log(responseTime - requestTime);
+                        future = request.sendBuffer(body);
                     }
-                });
+
+                    streams.incrementAndGet(); // stream opened
+                    future.onComplete(handler -> {
+                        streams.decrementAndGet(); // stream closed
+
+                        if (handler.failed()) {
+                            this.interrupt();
+                            throw new RuntimeException(handler.cause());
+                        } else if (handler.result().statusCode() != config.getExpectedStatusCode()) {
+                            this.interrupt();
+                            throw new RuntimeException(String.format(
+                                    "Expected status code [%s], received [%s].",
+                                    config.getExpectedStatusCode(),
+                                    handler.result().statusCode()));
+                        } else {
+                            long responseTime = System.nanoTime();
+                            metrics.log(responseTime - requestTime);
+                        }
+                    });
+                } catch (Throwable th) {
+                    th.printStackTrace();
+                    this.interrupt();
+                }
             }
         }
     }
 
     @Override
     public void interrupt() {
-        running = false;
-        vertx.setTimer(1_000, handler -> {
-            // wait a sec for all transactions to complete then close vertx 
-            // else a bunch of broken pipe exceptions could be thrown
-            vertx.close();
-        });
+        if (running) {
+            running = false;
+            vertx.setTimer(1_000, handler -> {
+                // wait a sec for all transactions to complete then close vertx 
+                // else a bunch of broken pipe exceptions could be thrown
+                vertx.close();
+            });
+        }
     }
 
 }
