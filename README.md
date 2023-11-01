@@ -25,11 +25,6 @@ Json schema for client and server configuration...
           "type" : "integer",
           "default" : 1
         },
-        "tpsPerConnection" : {
-          "description" : "Desired TPS per connection. How many requests do you want each client/thread to send per second over its TCP connection?",
-          "type" : "integer",
-          "default" : 100
-        },
         "multiplexingLimit" : {
           "description" : "Multiplexing limit for each TCP connection. How many streams/transactions should one TCP connection support?",
           "type" : "integer",
@@ -76,6 +71,11 @@ Json schema for client and server configuration...
         "body" : {
           "description" : "Body of the HTTP request.",
           "type" : "string"
+        },
+        "expectedStatusCode" : {
+          "description" : "What status code should I expect in the response?",
+          "type" : "integer",
+          "default" : 200
         }
       }
     },
@@ -120,16 +120,12 @@ Json schema for client and server configuration...
           "description" : "Body of the HTTP response.",
           "type" : "string"
         },
-        "verticles" : {
-          "description" : "Number of HTTP service verticles. Default is 2x cpu cores.",
-          "type" : "integer"
-        },
         "multiplexingLimit" : {
           "description" : "Multiplexing limit for each TCP connection. How many streams/transactions should one TCP connection support?",
           "type" : "integer",
           "default" : 1000
         },
-        "blockingNanos" : {
+        "blockingMillis" : {
           "description" : "Should be zero unless you want to simulate the duration it takes to execute service logic.",
           "type" : "integer",
           "default" : 0
