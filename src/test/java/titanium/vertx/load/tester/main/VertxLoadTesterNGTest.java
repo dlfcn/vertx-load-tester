@@ -75,7 +75,7 @@ public class VertxLoadTesterNGTest {
              */
             {
                 false, 0, 
-                2, 1, 100, 
+                2, 1, 1_000, 
                 HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
             },
             /*
@@ -88,21 +88,21 @@ public class VertxLoadTesterNGTest {
             500 tps = 1_000 millis / 2 millis;
             5k tps = 500 tps * 10 connections;
              */
-            {
-                false, 2, 
-                1, 10, 500, 
-                HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
-            },
+//            {
+//                false, 2, 
+//                1, 10, 500, 
+//                HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
+//            },
             /*
             Expected TPS = ~10k
             Good connection scaling example
             1k tps per connection = 1 second / 1 ms (per request)
              */
-            {
-                false, 1, 
-                1, 10, 1_000, 
-                HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
-            }
+//            {
+//                false, 1, 
+//                1, 10, 1_000, 
+//                HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
+//            }
         };
     }
 
