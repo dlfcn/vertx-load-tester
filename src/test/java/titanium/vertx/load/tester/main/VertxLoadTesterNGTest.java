@@ -55,23 +55,12 @@ public class VertxLoadTesterNGTest {
 
     @DataProvider
     public Object[][] loadProvider() {
-        /*
-        Note that each test will take roughly 60 seconds to execute.
-        And tests might fail if you don't have enough CPU!
-         */
         return new Object[][]{
             /*
-            Expected TPS = 30k+
-            Server immediately responds 200.
-            
-            Monitoring the server for the number of requests from a single
-            remote port shows that one connection can be favored if the 
-            multiplexing limit is set too high. This is partly due to the server 
-            taking zero time to process the request and send a response to 
-            close the transaction and free up the stream on the connection. 
-            Adding latency will ensure the client sends an even number of 
-            requests over all available connections, thus utilizing more of a 
-            servers available "verticles" (which are just "event-loop-threads").
+            Non cpu intensive test.
+            Expect TPS = 2k+
+            Two clients each sending over one connection.
+            No server latency.
              */
             {
                 false, 0, 
@@ -79,24 +68,10 @@ public class VertxLoadTesterNGTest {
                 HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
             },
             /*
-            Expected TPS = ~5k
-            Server takes 2ms to process each request. Max TPS is equal to the 
-            time each transaction takes to process using an event-loop-thread, 
-            multiplied by the number of connections.
-            
-            Expected TPS = (1 sec / processing millis) * Number Of Connections;
-            500 tps = 1_000 millis / 2 millis;
-            5k tps = 500 tps * 10 connections;
-             */
-//            {
-//                false, 2, 
-//                1, 10, 500, 
-//                HttpMethod.POST, "localhost", 8080, "/nausf-auth/v1/ue-authentications/"
-//            },
-            /*
-            Expected TPS = ~10k
-            Good connection scaling example
-            1k tps per connection = 1 second / 1 ms (per request)
+            Fairly cpu intesive test.
+            Expected TPS = 10k
+            Example showing how vertx utilizes connections based on settings.
+            1k max concurrent streams per second over 10 connections.
              */
 //            {
 //                false, 1, 

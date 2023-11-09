@@ -14,12 +14,13 @@ import io.vertx.core.http.HttpMethod;
 import io.vertx.core.json.JsonObject;
 import io.vertx.json.schema.JsonSchemaValidationException;
 import io.vertx.json.schema.OutputUnit;
+import java.net.URL;
 import static org.testng.Assert.*;
 import org.testng.annotations.Test;
 
 public class TestConfigurationNGTest {
     
-    private final String baseDirectory = "/Users/dfontana/NetBeansProjects/vertx-load-tester/src/test/resources/"; //todo - dynamically set this
+    private final URL configUrl = Thread.currentThread().getContextClassLoader().getResource("config.json");
     
     @Test
     public void validatorTest() {
@@ -53,7 +54,7 @@ public class TestConfigurationNGTest {
     @Test
     public void validClientConfigTest() {
     
-        ClientConfiguration config = TestConfiguration.getClientConfiguration(baseDirectory + "config.json");
+        ClientConfiguration config = TestConfiguration.getClientConfiguration(configUrl.getPath());
         
         assertEquals(config.getNumberOfClients(), 1);
         assertEquals(config.getNumberOfConnections(), 10);
@@ -78,7 +79,7 @@ public class TestConfigurationNGTest {
     @Test
     public void serverConfigTest() {
         
-        ServerConfiguration config = TestConfiguration.getServerConfiguration(baseDirectory + "config.json");
+        ServerConfiguration config = TestConfiguration.getServerConfiguration(configUrl.getPath());
         
         assertEquals(config.getHost(), "localhost");
         assertEquals(config.getPort(), 8080);
