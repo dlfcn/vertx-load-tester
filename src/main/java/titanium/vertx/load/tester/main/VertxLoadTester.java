@@ -22,7 +22,7 @@ public class VertxLoadTester extends Thread {
     private static VertxLoadTester INSTANCE = null;
 
     /**
-     * First argument must be "client" or "server". The seconds argument must 
+     * First argument must be "client" or "server". The second argument must 
      * be the path to the configuration file. See README file for expected 
      * json schema.
      * 

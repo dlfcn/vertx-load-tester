@@ -23,8 +23,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import titanium.vertx.load.tester.config.ClientConfiguration;
 
 /**
- * An http client/thread with one connection that sends X number of requests per
- * second.
+ * A thread that sends requests using a vertx web client.
  */
 public class Client extends Thread {
 

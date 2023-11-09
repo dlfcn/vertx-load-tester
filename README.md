@@ -1,8 +1,6 @@
 # vertx-load-tester
 Vertx Load Tester
 
-//todo - dynamically set this (path of configuration files to tests).
-
 To run load tester...
 1. Build project
 2. Go to /vertx-load-tester/target
@@ -12,7 +10,6 @@ To run load tester...
 
 Json schema for client and server configuration...
 {
-  "title" : "vertx-load-tester.json",
   "description" : "Client and server configuration.",
   "type" : "object",
   "properties" : {
